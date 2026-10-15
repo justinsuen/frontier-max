@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import DotField from "./components/dot-field";
+import Splash, { SPLASH_CHECK } from "./components/splash";
 import "./globals.css";
 
 // Same type pairing as frontiercommons.org.
@@ -14,8 +15,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${plexMono.variable}`}>
+    // The splash check may add a class to <html> before React loads.
+    <html lang="en" className={`${manrope.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SPLASH_CHECK }} />
+      </head>
       <body>
+        <Splash />
         <DotField />
         {children}
       </body>
