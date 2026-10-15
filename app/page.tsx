@@ -25,7 +25,7 @@ export default async function HomePage() {
   const [{ data, error }, { data: collectionRows }] = await Promise.all([
     supabase
       .from("titles")
-      .select("id, type, name, release_year, poster_url, genres(name)")
+      .select("id, type, name, release_year, poster_url, backdrop_url, genres(name)")
       .order("name")
       .returns<TitleRow[]>(),
     supabase

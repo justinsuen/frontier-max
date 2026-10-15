@@ -362,3 +362,28 @@ from (values
 join public.titles t on t.name = v.title_name
 join public.genres g on g.name = v.genre_name
 on conflict do nothing;
+
+-- Landscape backdrops (from The Movie Database). Needs the 20261015060000 migration.
+update public.titles t
+set backdrop_url = 'https://image.tmdb.org/t/p/w780/' || v.image
+from (values
+  ('Hacksaw Ridge', 'vDKRMZGFTKP9nQolzeSB1rB1w6p.jpg'),
+  ('The Ultimate Gift', 't6ohjYxnEolUGupwvsIHioWfVxl.jpg'),
+  ('End of the Spear', 'ghbiFYjiPGH3s4mEv7O9qRGGcvk.jpg'),
+  ('Unbroken', 'wxdtjlapI0d1vsXhNN0LhLMsaGw.jpg'),
+  ('The Best Christmas Pageant Ever', '1AIwhOIMktmgesIqNcwUsQWYLl5.jpg'),
+  ('Klaus', 'cYQvXNPZLow73lhspVQ7CYlT3Mi.jpg'),
+  ('Jonah: A VeggieTales Movie', 'f02gitQgX3QocVeeqgak8U6LZB4.jpg'),
+  ('The Pirates Who Don''t Do Anything: A VeggieTales Movie', 'qnrtxlmvWGYzNKxtNnh8sd29j9w.jpg'),
+  ('VeggieTales: Lord of the Beans', '5PyYI5tZzGCrZqBEkYWIOADZF5r.jpg'),
+  ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 'tuDhEdza074bA497bO9WFEPs6O6.jpg'),
+  ('The Chronicles of Narnia: Prince Caspian', '9pBv1BOSloAUgAkF0meJWdnbV4Q.jpg'),
+  ('The Chronicles of Narnia: The Voyage of the Dawn Treader', 'oc3be3waruLd0PB9h4bomN7Le3v.jpg'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'oiwc338EoBgS4sEI2ixAny4KQKg.jpg'),
+  ('The Lord of the Rings: The Two Towers', '6G73mNyooWAEQTpckPSnFxFoNmc.jpg'),
+  ('The Lord of the Rings: The Return of the King', 'ctiw6FZK4N36LmkjSklWEbuvlq9.jpg'),
+  ('The Chosen', '3siv3RaQrdr2tQiv9jHq71sLlzo.jpg'),
+  ('The Promised Land', 'koJpCFtMQPApmqZ4d3dy3KhlXAA.jpg'),
+  ('House of David', 'tWLGlPOYgiqkFgm3S1ub2MeXFGJ.jpg')
+) as v (name, image)
+where t.name = v.name and t.backdrop_url is null;

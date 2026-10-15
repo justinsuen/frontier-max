@@ -9,6 +9,8 @@ export type Title = {
   name: string;
   release_year: number | null;
   poster_url: string | null;
+  // Wide 16:9 image used for the cards; the poster is the fallback.
+  backdrop_url: string | null;
   genres: string[];
 };
 
@@ -98,7 +100,7 @@ export default function Browse({
             {continueWatching.map((item) => (
               <li key={item.title.id} className="row-item">
                 <Link href={`/titles/${item.title.id}`} className="card-link">
-                  <Poster title={item.title} />
+                  <Artwork title={item.title} />
                   <span className="progress-bar" aria-hidden="true">
                     <span style={{ width: `${Math.max(item.percent, 3)}%` }} />
                   </span>
@@ -178,7 +180,7 @@ function TitleCard({ title }: { title: Title }) {
   return (
     <li className="card">
       <Link href={`/titles/${title.id}`} className="card-link">
-        <Poster title={title} />
+        <Artwork title={title} />
         <div className="card-body">
           <h2 className="card-title">{title.name}</h2>
           <p className="card-meta">
@@ -217,20 +219,28 @@ function RowTitle({ title }: { title: Title }) {
   return (
     <li className="row-item">
       <Link href={`/titles/${title.id}`} className="card-link">
-        <Poster title={title} />
+        <Artwork title={title} />
         <span className="row-title">{title.name}</span>
       </Link>
     </li>
   );
 }
 
-function Poster({ title }: { title: Title }) {
-  return isHttpUrl(title.poster_url) ? (
-    // Posters come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
-    <img className="poster" src={title.poster_url} alt="" loading="lazy" />
-  ) : (
-    <div className="poster">{title.name.charAt(0).toUpperCase()}</div>
-  );
+// Landscape artwork for cards: the backdrop, else the poster shown whole on a
+// navy backing, else the title's first letter.
+// Images come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
+function Artwork({ title }: { title: Title }) {
+  if (isHttpUrl(title.backdrop_url)) {
+    return <img className="tile" src={title.backdrop_url} alt="" loading="lazy" />;
+  }
+  if (isHttpUrl(title.poster_url)) {
+    return (
+      <span className="tile tile-poster">
+        <img src={title.poster_url} alt="" loading="lazy" />
+      </span>
+    );
+  }
+  return <span className="tile">{title.name.charAt(0).toUpperCase()}</span>;
 }
 
 function isHttpUrl(value: string | null): value is string {
