@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { setInWatchlist } from "./actions";
 import type { Title } from "./browse";
 
@@ -13,10 +13,14 @@ export type FeaturedItem = {
 };
 
 const ADVANCE_MS = 7000;
+// After the mouse moves or the page scrolls, wait this long without movement before resuming.
+const IDLE_MS = 2000;
 
 // The large rotating banner at the top of the home page. It advances on its own,
-// but pauses while the pointer or keyboard focus is on it, while the tab is hidden,
-// and entirely for people who ask their system for reduced motion.
+// but pauses while the person is moving the mouse or scrolling (resuming 2s after they
+// stop), while keyboard focus is in it, and while the tab is hidden. It never moves for
+// people who ask their system for reduced motion. Resuming continues the countdown
+// where it stopped rather than starting it over.
 export default function Featured({
   items,
   savedIds,
@@ -30,18 +34,46 @@ export default function Featured({
   signedIn: boolean;
 }) {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [cycle, setCycle] = useState(0);
+  const [moving, setMoving] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const paused = moving || focused || hidden;
 
+  // Mouse movement or scrolling anywhere pauses; 2s of stillness resumes.
   useEffect(() => {
-    if (paused || items.length < 2) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = setTimeout(() => {
-      if (document.visibilityState === "visible") setIndex((i) => (i + 1) % items.length);
-      else setCycle((c) => c + 1);
-    }, ADVANCE_MS);
-    return () => clearTimeout(timer);
-  }, [index, paused, cycle, items.length]);
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    const onActivity = () => {
+      setMoving(true);
+      clearTimeout(idle);
+      idle = setTimeout(() => setMoving(false), IDLE_MS);
+    };
+    const onVisibility = () => setHidden(document.visibilityState !== "visible");
+    const events = ["mousemove", "scroll", "wheel", "touchmove"] as const;
+    for (const e of events) window.addEventListener(e, onActivity, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    return () => {
+      clearTimeout(idle);
+      for (const e of events) window.removeEventListener(e, onActivity);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  // Time left on the current slide, kept across pauses.
+  const remaining = useRef(ADVANCE_MS);
+  useEffect(() => {
+    remaining.current = ADVANCE_MS;
+  }, [index]);
+  useEffect(() => {
+    if (paused || reducedMotion || items.length < 2) return;
+    const startedAt = Date.now();
+    const timer = setTimeout(() => setIndex((i) => (i + 1) % items.length), remaining.current);
+    return () => {
+      clearTimeout(timer);
+      remaining.current = Math.max(0, remaining.current - (Date.now() - startedAt));
+    };
+  }, [index, paused, reducedMotion, items.length]);
 
   if (items.length === 0) return null;
 
@@ -50,11 +82,9 @@ export default function Featured({
       className="featured"
       aria-roledescription="carousel"
       aria-label="Featured"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
+      onFocus={() => setFocused(true)}
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setPaused(false);
+        if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
       }}
     >
       {items.map((item, i) => (
@@ -79,8 +109,14 @@ export default function Featured({
               aria-current={i === index}
               onClick={() => setIndex(i)}
             >
-              {/* Fills up while the slide is showing, as a countdown to the next one. */}
-              {i === index && !paused && <span key={`${index}-${cycle}`} className="featured-dot-fill" />}
+              {/* Fills up while the slide is showing, as a countdown to the next one; freezes while paused. */}
+              {i === index && !reducedMotion && (
+                <span
+                  key={index}
+                  className="featured-dot-fill"
+                  style={{ animationPlayState: paused ? "paused" : "running" }}
+                />
+              )}
             </button>
           ))}
         </div>
