@@ -5,9 +5,9 @@ alter table public.episodes alter column video_url drop not null;
 
 -- Image for the episode list. YouTube episodes can leave this empty; the site
 -- uses the video's own thumbnail.
-alter table public.episodes add column thumbnail_url text;
+alter table public.episodes add column if not exists thumbnail_url text;
 
 -- Where the episode can be watched elsewhere (e.g. Prime Video), shown as a link.
-alter table public.episodes add column watch_url text;
+alter table public.episodes add column if not exists watch_url text;
 
-alter table public.episodes add column description text;
+alter table public.episodes add column if not exists description text;
