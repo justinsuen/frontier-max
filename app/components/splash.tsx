@@ -1,8 +1,8 @@
 // The logo intro. It's plain HTML and CSS so it's on screen from the very first
 // paint. SPLASH_CHECK in <head> decides, before paint, which version plays:
 // - the full intro on the first page of a visit (browser session);
-// - on a later reload (html.splash-quick), no logo: a brass loading ring, then the
-//   navy panel wipes off to the right with a brass edge (~1s);
+// - on a later reload (html.splash-quick), no logo: a navy screen with the dot-grid
+//   clouds and a brass loading ring fades in, then fades out (~1.2s);
 // - none (html.splash-seen) for other page loads, for reduced motion, or when
 //   session storage isn't available.
 
@@ -10,8 +10,9 @@ const STORAGE_KEY = "fm-splash";
 
 export const SPLASH_CHECK = `try{var d=document.documentElement,n=performance.getEntriesByType("navigation")[0];if(matchMedia("(prefers-reduced-motion: reduce)").matches){d.classList.add("splash-seen")}else if(!sessionStorage.getItem("${STORAGE_KEY}")){sessionStorage.setItem("${STORAGE_KEY}","1")}else if(n&&n.type==="reload"){d.classList.add("splash-quick")}else{d.classList.add("splash-seen")}}catch(e){document.documentElement.classList.add("splash-seen")}`;
 
-// Click or any key skips it; it also removes itself once it has faded or wiped out.
-const SPLASH_SKIP = `(function(){var s=document.getElementById("splash");if(!s)return;function done(){s.classList.add("is-done");removeEventListener("keydown",done)}s.addEventListener("click",done);addEventListener("keydown",done);s.addEventListener("animationend",function(e){if(e.target===s)done()})})()`;
+// Click or any key skips it; it also removes itself once its closing fade
+// (splash-out or splash-fade-out) ends, ignoring the reload version's fade-in.
+const SPLASH_SKIP = `(function(){var s=document.getElementById("splash");if(!s)return;function done(){s.classList.add("is-done");removeEventListener("keydown",done)}s.addEventListener("click",done);addEventListener("keydown",done);s.addEventListener("animationend",function(e){if(e.target===s&&/out$/.test(e.animationName))done()})})()`;
 
 const WORD = "FRONTIER";
 const ACCENT = "MAX";

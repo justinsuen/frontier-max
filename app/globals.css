@@ -42,7 +42,9 @@ body {
   --dots-4: 18% 82%;
   --dots-5: 46% 42%;
 }
-body::before {
+/* The reload screen (html.splash-quick .splash) uses the same clouds. */
+body::before,
+html.splash-quick .splash::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -1167,38 +1169,29 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   .splash { display: none; }
 }
 
-/* Reload version (html.splash-quick): no logo, just a brass loading ring, then the
-   navy panel wipes off to the right behind a glowing brass edge. About 1s. */
+/* Reload version (html.splash-quick): no logo. A navy screen with the dot-grid
+   clouds fades in over the page with a brass loading ring, then fades out. ~1.2s. */
 .splash-spinner { display: none; }
 html.splash-quick .splash-mark { display: none; }
+html.splash-quick .splash {
+  background: radial-gradient(ellipse at center, #141a4a 0%, var(--bg) 70%);
+  opacity: 0;
+  animation:
+    splash-fade-in 0.25s ease-out forwards,
+    splash-fade-out 0.4s ease-in 0.8s forwards;
+}
+html.splash-quick .splash::before { position: absolute; z-index: 0; }
 html.splash-quick .splash-spinner {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 44px;
   height: 44px;
   border: 3px solid rgb(249 248 246 / 0.12);
   border-top-color: var(--brass);
   border-radius: 50%;
-  animation:
-    splash-spin 0.75s linear infinite,
-    splash-spinner-out 0.2s ease-in 0.5s forwards;
-}
-html.splash-quick .splash {
-  animation: splash-wipe 0.55s cubic-bezier(0.7, 0, 0.25, 1) 0.55s forwards;
-}
-/* The brass leading edge travels with the panel's left side. */
-html.splash-quick .splash::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 4px;
-  background: var(--brass);
-  box-shadow: 0 0 18px 4px rgb(211 154 95 / 0.55);
+  animation: splash-spin 0.75s linear infinite;
 }
 @keyframes splash-spin { to { transform: rotate(360deg); } }
-@keyframes splash-spinner-out { to { opacity: 0; transform: scale(0.6); } }
-@keyframes splash-wipe {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(100% + 30px)); visibility: hidden; }
-}
+@keyframes splash-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes splash-fade-out { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
