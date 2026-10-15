@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { Artwork } from "./components/title-card";
+import { Artwork, TitleMeta } from "./components/title-card";
 import Featured, { type FeaturedItem } from "./featured";
 
 export type Title = {
@@ -183,6 +183,7 @@ function RowTitle({ title }: { title: Title }) {
       <Link href={`/titles/${title.id}`} className="card-link">
         <Artwork title={title} />
         <span className="row-title">{title.name}</span>
+        <TitleMeta title={title} />
       </Link>
     </li>
   );

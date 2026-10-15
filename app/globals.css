@@ -1109,48 +1109,4 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 }
 .picture-option:has(input:checked) .picture-name { color: var(--text); }
 .profiles-main .auth-card { width: min(560px, 100%); }
-
-/* ---- Movie / series label on thumbnails (hover and keyboard focus) ---- */
-.tile-badge {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  left: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px 4px 6px;
-  border-radius: var(--radius);
-  background: rgb(var(--shade) / 0.85);
-  backdrop-filter: blur(6px);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-transform: uppercase;
-  opacity: 0;
-  transform: translateY(-3px);
-  transition: opacity 0.15s, transform 0.15s;
-  pointer-events: none;
-}
-.tile-badge.is-movie { color: var(--brass); }
-.tile-badge.is-series { color: var(--green); }
-.tile-badge svg {
-  width: 13px;
-  height: 13px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.tile-badge-detail { color: var(--text); }
-.card:hover .tile-badge, .row-item:hover .tile-badge, .card-link:focus-visible .tile-badge {
-  opacity: 1;
-  transform: none;
-}
-@media (hover: none) {
-  /* Touch screens have no hover, so the label is always shown there. */
-  .tile-badge { opacity: 1; transform: none; }
-}
+.row-item .card-meta { margin-top: 5px; }
