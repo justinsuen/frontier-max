@@ -138,6 +138,7 @@ export default function Watch({
   const nextEpisode = current ? playable[playable.findIndex((e) => e.id === current.id) + 1] : undefined;
   const nextThumb = nextEpisode && parseHttpUrl(nextEpisode.thumbnail_url ?? videoThumbnail(nextEpisode.video_url));
 
+  const playingTrailer = selection.key === "main" && title.type === "series";
   const nowPlaying = current
     ? episodeLabel(current)
     : title.type === "series" && title.video_url
@@ -358,25 +359,47 @@ export default function Watch({
               onStart={requestPendingFullscreen}
               onEnd={() => setEnded(true)}
             />
-            {ended && nextEpisode && (
+            {/* The end card: rate what just finished (not a trailer), then go on to the next episode. */}
+            {ended && !playingTrailer && (
               <div className="up-next">
-                <div className="up-next-card">
-                  {nextThumb && <img className="up-next-thumb" src={nextThumb.toString()} alt="" />}
-                  <div className="up-next-text">
-                    <p className="up-next-kicker">Up next</p>
-                    <p className="up-next-name">{episodeLabel(nextEpisode)}</p>
-                    <div className="up-next-buttons">
-                      <button className="hero-play" onClick={playNext} autoFocus>
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M7 4.5v15l13-7.5z" />
-                        </svg>
-                        Next episode
-                      </button>
-                      <button className="hero-restart" onClick={closePlayer}>
-                        Back to episodes
-                      </button>
+                <div className="up-next-inner">
+                  {nextEpisode ? (
+                    <div className="up-next-card">
+                      {nextThumb && <img className="up-next-thumb" src={nextThumb.toString()} alt="" />}
+                      <div className="up-next-text">
+                        <p className="up-next-kicker">Up next</p>
+                        <p className="up-next-name">{episodeLabel(nextEpisode)}</p>
+                        <div className="up-next-buttons">
+                          <button className="hero-play" onClick={playNext} autoFocus>
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M7 4.5v15l13-7.5z" />
+                            </svg>
+                            Next episode
+                          </button>
+                          <button className="hero-restart" onClick={closePlayer}>
+                            Back to episodes
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="up-next-text">
+                      <p className="up-next-kicker">{current ? "That's the last episode" : "The end"}</p>
+                      <p className="up-next-name">{current ? episodeLabel(current) : title.name}</p>
+                      <div className="up-next-buttons">
+                        <button className="hero-restart" onClick={closePlayer} autoFocus>
+                          {current ? "Back to episodes" : "Close"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <RatingPanel
+                    heading={current ? "Rate this episode" : "Rate this movie"}
+                    mine={mine[selection.key]}
+                    onRate={canTrack ? (r) => rate(current?.id ?? null, r) : undefined}
+                    signInHref={signInHref}
+                    hideTotals
+                  />
                 </div>
               </div>
             )}
@@ -664,6 +687,7 @@ function RatingPanel({
   counts,
   onRate,
   signInHref,
+  hideTotals = false,
 }: {
   heading: string;
   mine?: Rating;
@@ -672,6 +696,8 @@ function RatingPanel({
   // Missing when no profile is active; the buttons then lead to sign-in.
   onRate?: (rating: Rating) => void;
   signInHref: string;
+  // The end card asks for a rating without showing how others rated it.
+  hideTotals?: boolean;
 }) {
   return (
     <section className="rating-panel" aria-label={heading}>
@@ -696,7 +722,9 @@ function RatingPanel({
           )
         )}
       </div>
-      {!mine ? (
+      {hideTotals ? (
+        !onRate && <p className="rating-totals">Sign in to rate.</p>
+      ) : !mine ? (
         <p className="rating-totals">
           {onRate ? "Rate it to see how others rated it." : "Sign in to rate and see how others rated it."}
         </p>

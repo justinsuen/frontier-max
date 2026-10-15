@@ -1408,11 +1408,15 @@ html.splash-quick .splash-spinner {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  align-items: safe center;
+  justify-items: center;
   padding: clamp(12px, 4vw, 48px);
   background: rgb(var(--shade) / 0.88);
   animation: theater-in 0.3s ease-out;
 }
+.up-next { overflow-y: auto; }
+.up-next-inner { width: 100%; max-width: 860px; }
+.up-next .rating-panel { margin-top: clamp(16px, 3vw, 28px); padding-top: clamp(14px, 2.5vw, 20px); }
 .up-next-card { display: flex; align-items: center; gap: clamp(16px, 3vw, 32px); max-width: 860px; width: 100%; }
 .up-next-thumb { flex: 0 1 46%; min-width: 0; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius); }
 .up-next-text { flex: 1 1 0; min-width: 0; }
