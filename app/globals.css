@@ -717,8 +717,21 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   object-position: left bottom;
   filter: drop-shadow(0 1px 6px rgb(0 0 0 / 0.7));
 }
-.card:hover .tile, .row-item:hover .tile { outline: 1px solid var(--brass); }
-.card-link:focus-visible .tile { outline: 2px solid var(--brass); outline-offset: 2px; }
+/* Hover and focus rings are drawn inside the tile's edge, so the sideways-scrolling
+   rows (which clip anything outside them) can't cut off a side. */
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--brass);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.card:hover .tile::after, .row-item:hover .tile::after { opacity: 1; }
+.card-link:focus-visible .tile::after { opacity: 1; box-shadow: inset 0 0 0 3px var(--text); }
 
 
 @media (max-width: 560px) {
