@@ -31,16 +31,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The brand dot grid: faint, behind everything, and fading out down the page. */
+/* The brand dot grid: fixed behind the whole screen, strongest at the top and
+   easing to about a third toward the bottom so it never competes with content. */
 body::before {
   content: "";
-  position: absolute;
-  inset: 0 0 auto;
+  position: fixed;
+  inset: 0;
   z-index: -1;
-  height: min(1800px, 200vh);
-  background: radial-gradient(rgb(249 248 246 / 0.075) 1px, transparent 1.5px) 0 0 / 26px 26px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 25%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 25%, transparent 100%);
+  background: radial-gradient(rgb(160 172 255 / 0.16) 1.3px, transparent 1.8px) 0 0 / 24px 24px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 100%);
   pointer-events: none;
 }
 
