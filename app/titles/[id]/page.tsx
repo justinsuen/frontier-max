@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getAccount, requireProfileIfSignedIn } from "@/lib/account";
 import AccountNav from "../../components/account-nav";
-import type { Rating } from "@/lib/ratings";
-import Watch, { type Episode, type Progress, type RatingSummaryRow, type TitleDetail } from "./watch";
+import { getRatingSummary, type Rating, type RatingSummaryRow } from "@/lib/ratings";
+import Watch, { type Episode, type Progress, type TitleDetail } from "./watch";
 
 export const dynamic = "force-dynamic";
 
@@ -41,10 +41,6 @@ export default async function TitlePage({ params }: { params: Promise<{ id: stri
   const title = await getTitle(id);
   if (!title) notFound();
 
-  // Everyone sees the totals; only the active profile's own ratings are loaded as "mine".
-  const { data: summaryData } = await supabase.rpc("rating_summary", { target_title: title.id });
-  const ratingSummary = (summaryData ?? []) as RatingSummaryRow[];
-
   let progress: Progress[] = [];
   let inWatchlist = false;
   let myRatings: { episode_id: number | null; rating: Rating }[] = [];
@@ -71,6 +67,14 @@ export default async function TitlePage({ params }: { params: Promise<{ id: stri
     progress = progressResult.data ?? [];
     inWatchlist = (watchlistResult.count ?? 0) > 0;
     myRatings = ratingsResult.data ?? [];
+  }
+
+  // Totals are revealed only for what this profile has already rated, so they
+  // aren't sent to the browser before a vote.
+  let ratingSummary: RatingSummaryRow[] = [];
+  if (myRatings.length > 0) {
+    const rated = new Set(myRatings.map((r) => r.episode_id));
+    ratingSummary = (await getRatingSummary(supabase, title.id)).filter((r) => rated.has(r.episode_id));
   }
 
   return (

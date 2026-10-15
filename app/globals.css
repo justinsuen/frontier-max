@@ -660,7 +660,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   text-decoration: none;
   cursor: pointer;
 }
-.rating-button svg, .rating-tally svg {
+.rating-button svg {
   width: 16px;
   height: 16px;
   fill: none;
@@ -680,6 +680,3 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .rating-totals { margin: 10px 0 0; color: var(--muted); font-size: 0.85rem; }
 .rating-summary .rating-totals { margin: 0; }
 
-.rating-tally { display: flex; gap: 12px; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 0.75rem; }
-.rating-tally > span { display: inline-flex; align-items: center; gap: 4px; color: var(--rating); }
-.rating-tally svg { width: 12px; height: 12px; fill: currentColor; stroke: none; }

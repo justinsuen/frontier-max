@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AVATAR_COLORS, MAX_PROFILES, PROFILE_COOKIE, getAccount, safeNext, type AvatarColor } from "@/lib/account";
-import { RATINGS, type Rating } from "@/lib/ratings";
+import { RATINGS, getRatingCounts, type Rating, type RatingCounts } from "@/lib/ratings";
 import { createClient } from "@/lib/supabase/server";
 
 export type FormState = { error?: string; message?: string } | undefined;
@@ -165,19 +165,27 @@ export async function saveProgress(input: {
 }
 
 // Sets this profile's rating for a title (episodeId null) or an episode; null clears it.
-export async function setRating(titleId: number, episodeId: number | null, rating: Rating | null) {
+// Returns the updated totals once the profile has a rating, so they can be revealed.
+export async function setRating(
+  titleId: number,
+  episodeId: number | null,
+  rating: Rating | null
+): Promise<RatingCounts | null> {
   const { supabase, profile } = await getAccount();
-  if (!profile || !Number.isInteger(titleId) || (episodeId !== null && !Number.isInteger(episodeId))) return;
-  if (rating !== null && !RATINGS.includes(rating)) return;
+  if (!profile || !Number.isInteger(titleId) || (episodeId !== null && !Number.isInteger(episodeId))) return null;
+  if (rating !== null && !RATINGS.includes(rating)) return null;
 
   if (rating === null) {
     let query = supabase.from("ratings").delete().eq("profile_id", profile.id).eq("title_id", titleId);
     query = episodeId === null ? query.is("episode_id", null) : query.eq("episode_id", episodeId);
     await query;
-    return;
+    return null;
   }
-  await supabase.from("ratings").upsert(
+
+  const { error } = await supabase.from("ratings").upsert(
     { profile_id: profile.id, title_id: titleId, episode_id: episodeId, rating, updated_at: new Date().toISOString() },
     { onConflict: "profile_id,title_id,episode_id" }
   );
+  if (error) return null;
+  return getRatingCounts(supabase, titleId, episodeId);
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
 import { parseHttpUrl, videoSource, videoThumbnail } from "@/lib/video";
-import { NO_RATINGS, RATINGS, RATING_LABELS, type Rating, type RatingCounts } from "@/lib/ratings";
+import { RATINGS, RATING_LABELS, type Rating, type RatingCounts, type RatingSummaryRow } from "@/lib/ratings";
 import { saveProgress, setInWatchlist, setRating } from "../../actions";
 import Player, { type PlaybackReport } from "./player";
 
@@ -39,9 +39,6 @@ export type Progress = {
   completed: boolean;
   updated_at: string;
 };
-
-// Totals from rating_summary(): one row per episode, plus episode_id null for the title itself.
-export type RatingSummaryRow = { episode_id: number | null } & RatingCounts;
 
 // What the player is showing ("main" is the title's own video: a movie, or a series trailer),
 // and where it started. resumeAt is fixed when chosen so saving progress never reloads the player.
@@ -82,6 +79,7 @@ export default function Watch({
   );
   const playerRef = useRef<HTMLDivElement>(null);
   const lastSaved = useRef<Record<string, number>>({});
+  // Totals for items this profile has rated; the server sends no others.
   const [counts, setCounts] = useState<Record<string, RatingCounts>>(() =>
     Object.fromEntries(
       ratingSummary.map(({ episode_id, not_for_me, liked, loved }) => [
@@ -94,7 +92,9 @@ export default function Watch({
     Object.fromEntries(myRatings.map((r) => [keyOf(r.episode_id), r.rating]))
   );
 
-  // Clicking the rating you already gave clears it. Totals update right away.
+  const latestVote = useRef<Record<string, number>>({});
+
+  // Clicking the rating you already gave clears it (and hides the totals again).
   function rate(episodeId: number | null, choice: Rating) {
     const key = keyOf(episodeId);
     const previous = mine[key];
@@ -105,13 +105,24 @@ export default function Watch({
       else delete copy[key];
       return copy;
     });
-    setCounts((c) => {
-      const updated = { ...(c[key] ?? NO_RATINGS) };
-      if (previous) updated[previous] = Math.max(0, updated[previous] - 1);
-      if (next) updated[next] += 1;
-      return { ...c, [key]: updated };
-    });
-    setRating(title.id, episodeId, next).catch(() => {});
+    // Changing a vote we already have totals for can update them right away.
+    if (previous && next) {
+      setCounts((c) => {
+        if (!c[key]) return c;
+        const updated = { ...c[key] };
+        updated[previous] = Math.max(0, updated[previous] - 1);
+        updated[next] += 1;
+        return { ...c, [key]: updated };
+      });
+    }
+    // The server's totals are the real ones; ignore replies to superseded clicks.
+    const vote = (latestVote.current[key] ?? 0) + 1;
+    latestVote.current[key] = vote;
+    setRating(title.id, episodeId, next)
+      .then((fresh) => {
+        if (fresh && latestVote.current[key] === vote) setCounts((c) => ({ ...c, [key]: fresh }));
+      })
+      .catch(() => {});
   }
 
   const source = videoSource(current ? current.video_url : title.video_url, selection.resumeAt);
@@ -244,7 +255,6 @@ export default function Watch({
                     thumbnail={e.thumbnail_url ?? videoThumbnail(e.video_url)}
                     active={selection.key === keyOf(e.id)}
                     progress={progress[keyOf(e.id)]}
-                    ratings={counts[keyOf(e.id)]}
                     onPlay={videoSource(e.video_url) ? () => play(keyOf(e.id)) : undefined}
                     watchUrl={e.watch_url}
                   />
@@ -267,7 +277,6 @@ function EpisodeRow({
   progress,
   onPlay,
   watchUrl,
-  ratings,
 }: {
   number?: number;
   label: string;
@@ -278,7 +287,6 @@ function EpisodeRow({
   // Missing when the episode can't be played here.
   onPlay?: () => void;
   watchUrl?: string | null;
-  ratings?: RatingCounts;
 }) {
   const thumb = parseHttpUrl(thumbnail);
   const external = parseHttpUrl(watchUrl ?? null);
@@ -295,7 +303,6 @@ function EpisodeRow({
           {label}
         </span>
         {description && <span className="episode-description">{description}</span>}
-        {ratings && <RatingTally counts={ratings} />}
         {active ? (
           <span className="episode-state">Playing</span>
         ) : (
@@ -453,18 +460,18 @@ const TALLY_WORDS: Record<Rating, string> = { loved: "loved it", liked: "liked i
 function RatingPanel({
   heading,
   mine,
-  counts = NO_RATINGS,
+  counts,
   onRate,
   signInHref,
 }: {
   heading: string;
   mine?: Rating;
+  // Only known once this profile has rated; totals stay hidden until then.
   counts?: RatingCounts;
   // Missing when no profile is active; the buttons then lead to sign-in.
   onRate?: (rating: Rating) => void;
   signInHref: string;
 }) {
-  const total = counts.not_for_me + counts.liked + counts.loved;
   return (
     <section className="rating-panel" aria-label={heading}>
       <h2 className="rating-heading">{heading}</h2>
@@ -488,7 +495,13 @@ function RatingPanel({
           )
         )}
       </div>
-      {total > 0 ? (
+      {!mine ? (
+        <p className="rating-totals">
+          {onRate ? "Rate it to see how others rated it." : "Sign in to rate and see how others rated it."}
+        </p>
+      ) : !counts ? (
+        <p className="rating-totals">Counting votes…</p>
+      ) : (
         <div className="rating-summary">
           <span className="rating-bar" aria-hidden="true">
             {TALLY_ORDER.map((r) =>
@@ -501,24 +514,7 @@ function RatingPanel({
               .join(" · ")}
           </p>
         </div>
-      ) : (
-        <p className="rating-totals">No ratings yet.</p>
       )}
     </section>
-  );
-}
-
-function RatingTally({ counts }: { counts: RatingCounts }) {
-  const shown = TALLY_ORDER.filter((r) => counts[r] > 0);
-  if (shown.length === 0) return null;
-  return (
-    <span className="rating-tally" aria-label={shown.map((r) => `${counts[r]} ${TALLY_WORDS[r]}`).join(", ")}>
-      {shown.map((r) => (
-        <span key={r} data-rating={r}>
-          {RATING_ICONS[r]}
-          {counts[r]}
-        </span>
-      ))}
-    </span>
   );
 }
