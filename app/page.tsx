@@ -1,11 +1,17 @@
 import { requireProfileIfSignedIn } from "@/lib/account";
 import AccountNav from "./components/account-nav";
-import Browse, { type ContinueItem, type Title } from "./browse";
+import Browse, { type Collection, type ContinueItem, type Title } from "./browse";
 
 // Read the catalog on every request so rows added in Supabase show up right away.
 export const dynamic = "force-dynamic";
 
 type TitleRow = Omit<Title, "genres"> & { genres: { name: string }[] | null };
+type CollectionRow = {
+  slug: string;
+  name: string;
+  description: string | null;
+  collection_titles: { title_id: number; position: number }[];
+};
 type ProgressRow = {
   title_id: number;
   position_seconds: number;
@@ -16,17 +22,32 @@ type ProgressRow = {
 export default async function HomePage() {
   const { supabase, profile } = await requireProfileIfSignedIn("/");
 
-  const { data, error } = await supabase
-    .from("titles")
-    .select("id, type, name, release_year, poster_url, genres(name)")
-    .order("name")
-    .returns<TitleRow[]>();
+  const [{ data, error }, { data: collectionRows }] = await Promise.all([
+    supabase
+      .from("titles")
+      .select("id, type, name, release_year, poster_url, genres(name)")
+      .order("name")
+      .returns<TitleRow[]>(),
+    supabase
+      .from("collections")
+      .select("slug, name, description, collection_titles(title_id, position)")
+      .order("sort_order")
+      .returns<CollectionRow[]>(),
+  ]);
 
   if (error) {
     return <Browse titles={[]} message={`Couldn't load titles: ${error.message}`} accountNav={<AccountNav />} />;
   }
   const titles = data.map((t) => ({ ...t, genres: (t.genres ?? []).map((g) => g.name) }));
   const byId = new Map(titles.map((t) => [t.id, t]));
+
+  // Sections with their titles in order; empty ones are skipped.
+  const collections: Collection[] = (collectionRows ?? []).flatMap((c) => {
+    const members = [...c.collection_titles]
+      .sort((a, b) => a.position - b.position)
+      .flatMap((ct) => byId.get(ct.title_id) ?? []);
+    return members.length ? [{ slug: c.slug, name: c.name, description: c.description, titles: members }] : [];
+  });
 
   let continueWatching: ContinueItem[] = [];
   let myList: Title[] = [];
@@ -68,6 +89,7 @@ export default async function HomePage() {
   return (
     <Browse
       titles={titles}
+      collections={collections}
       continueWatching={continueWatching}
       myList={profile ? myList : undefined}
       profileName={profile?.name}

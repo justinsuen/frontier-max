@@ -12,6 +12,8 @@ export type Title = {
   genres: string[];
 };
 
+export type Collection = { slug: string; name: string; description: string | null; titles: Title[] };
+
 export type ContinueItem = { title: Title; label: string | null; percent: number };
 
 type TypeFilter = "all" | Title["type"];
@@ -25,6 +27,7 @@ const TABS: { value: TypeFilter; label: string }[] = [
 export default function Browse({
   titles,
   message,
+  collections = [],
   continueWatching = [],
   myList,
   profileName,
@@ -32,6 +35,7 @@ export default function Browse({
 }: {
   titles: Title[];
   message?: string;
+  collections?: Collection[];
   continueWatching?: ContinueItem[];
   // Undefined when no profile is active (signed out), so the row isn't offered.
   myList?: Title[];
@@ -111,18 +115,25 @@ export default function Browse({
             {myList.length === 0 ? (
               <li className="row-empty">Use “+ My List” on any title to save it here.</li>
             ) : (
-              myList.map((title) => (
-                <li key={title.id} className="row-item">
-                  <Link href={`/titles/${title.id}`} className="card-link">
-                    <Poster title={title} />
-                    <span className="row-title">{title.name}</span>
-                  </Link>
-                </li>
-              ))
+              myList.map((title) => <RowTitle key={title.id} title={title} />)
             )}
           </Row>
         )}
 
+        {!q &&
+          collections.map((c) => (
+            <Row key={c.slug} heading={c.name} description={c.description} id={c.slug}>
+              {c.titles.map((title) => (
+                <RowTitle key={title.id} title={title} />
+              ))}
+            </Row>
+          ))}
+
+        {!q && collections.length > 0 && (
+          <h2 className="section-heading" id="all-titles">
+            All titles
+          </h2>
+        )}
         <nav className="filters" aria-label="Filters">
           <div className="tabs" role="tablist">
             {TABS.map((tab) => (
@@ -180,12 +191,36 @@ function TitleCard({ title }: { title: Title }) {
   );
 }
 
-function Row({ heading, id, children }: { heading: string; id?: string; children: ReactNode }) {
+function Row({
+  heading,
+  description,
+  id,
+  children,
+}: {
+  heading: string;
+  description?: string | null;
+  id?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="row" id={id} aria-label={heading}>
-      <h2 className="row-heading">{heading}</h2>
+      <div className="row-head">
+        <h2 className="row-heading">{heading}</h2>
+        {description && <p className="row-description">{description}</p>}
+      </div>
       <ul className="row-scroller">{children}</ul>
     </section>
+  );
+}
+
+function RowTitle({ title }: { title: Title }) {
+  return (
+    <li className="row-item">
+      <Link href={`/titles/${title.id}`} className="card-link">
+        <Poster title={title} />
+        <span className="row-title">{title.name}</span>
+      </Link>
+    </li>
   );
 }
 

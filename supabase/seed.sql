@@ -269,3 +269,96 @@ where not exists (
   select 1 from public.episodes e
   where e.title_id = t.id and e.season_number = v.season_number and e.episode_number = v.episode_number
 );
+
+-- Home page sections. Needs the 20261015050000 collections migration.
+-- Re-running updates names and descriptions, and adds any missing titles.
+insert into public.collections (slug, name, description, sort_order)
+values
+  ('on-mission', 'On Mission', 'True stories of courage, sacrifice and faith under pressure.', 10),
+  ('stories-from-scripture', 'Stories from Scripture', 'The Bible''s stories, brought to the screen.', 20),
+  ('chronicles-of-narnia', 'The Chronicles of Narnia', 'C.S. Lewis''s classic, in order.', 30),
+  ('lord-of-the-rings', 'The Lord of the Rings', 'The complete trilogy, in order.', 40),
+  ('for-the-family', 'For the Family', 'Easy picks for watching together.', 50),
+  ('veggietales', 'VeggieTales', 'Bob, Larry and friends.', 60),
+  ('christmas', 'Christmas Favorites', 'For the holiday season.', 70)
+on conflict (slug) do update
+  set name = excluded.name, description = excluded.description, sort_order = excluded.sort_order;
+
+insert into public.collection_titles (collection_id, title_id, position)
+select c.id, t.id, v.position
+from (values
+  ('on-mission', 'Hacksaw Ridge', 1),
+  ('on-mission', 'End of the Spear', 2),
+  ('on-mission', 'Unbroken', 3),
+  ('stories-from-scripture', 'The Chosen', 1),
+  ('stories-from-scripture', 'House of David', 2),
+  ('stories-from-scripture', 'The Promised Land', 3),
+  ('stories-from-scripture', 'Jonah: A VeggieTales Movie', 4),
+  ('chronicles-of-narnia', 'The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 1),
+  ('chronicles-of-narnia', 'The Chronicles of Narnia: Prince Caspian', 2),
+  ('chronicles-of-narnia', 'The Chronicles of Narnia: The Voyage of the Dawn Treader', 3),
+  ('lord-of-the-rings', 'The Lord of the Rings: The Fellowship of the Ring', 1),
+  ('lord-of-the-rings', 'The Lord of the Rings: The Two Towers', 2),
+  ('lord-of-the-rings', 'The Lord of the Rings: The Return of the King', 3),
+  ('for-the-family', 'Klaus', 1),
+  ('for-the-family', 'The Best Christmas Pageant Ever', 2),
+  ('for-the-family', 'The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 3),
+  ('for-the-family', 'The Ultimate Gift', 4),
+  ('for-the-family', 'Jonah: A VeggieTales Movie', 5),
+  ('for-the-family', 'The Pirates Who Don''t Do Anything: A VeggieTales Movie', 6),
+  ('for-the-family', 'VeggieTales: Lord of the Beans', 7),
+  ('veggietales', 'Jonah: A VeggieTales Movie', 1),
+  ('veggietales', 'The Pirates Who Don''t Do Anything: A VeggieTales Movie', 2),
+  ('veggietales', 'VeggieTales: Lord of the Beans', 3),
+  ('christmas', 'Klaus', 1),
+  ('christmas', 'The Best Christmas Pageant Ever', 2)
+) as v (slug, title_name, position)
+join public.collections c on c.slug = v.slug
+join public.titles t on t.name = v.title_name
+on conflict (collection_id, title_id) do update set position = excluded.position;
+
+-- Genres, used by the genre filter buttons.
+insert into public.genres (name)
+values ('Adventure'), ('Animation'), ('Biblical'), ('Biography'), ('Comedy'),
+       ('Drama'), ('Family'), ('Fantasy'), ('War')
+on conflict (name) do nothing;
+
+insert into public.title_genres (title_id, genre_id)
+select t.id, g.id
+from (values
+  ('Hacksaw Ridge', 'War'), ('Hacksaw Ridge', 'Drama'), ('Hacksaw Ridge', 'Biography'),
+  ('The Ultimate Gift', 'Drama'), ('The Ultimate Gift', 'Family'),
+  ('End of the Spear', 'Drama'), ('End of the Spear', 'Biography'), ('End of the Spear', 'Adventure'),
+  ('Unbroken', 'War'), ('Unbroken', 'Drama'), ('Unbroken', 'Biography'),
+  ('The Best Christmas Pageant Ever', 'Comedy'), ('The Best Christmas Pageant Ever', 'Family'),
+  ('Klaus', 'Animation'), ('Klaus', 'Family'), ('Klaus', 'Comedy'),
+  ('Jonah: A VeggieTales Movie', 'Animation'), ('Jonah: A VeggieTales Movie', 'Family'),
+  ('Jonah: A VeggieTales Movie', 'Comedy'), ('Jonah: A VeggieTales Movie', 'Biblical'),
+  ('The Pirates Who Don''t Do Anything: A VeggieTales Movie', 'Animation'),
+  ('The Pirates Who Don''t Do Anything: A VeggieTales Movie', 'Family'),
+  ('The Pirates Who Don''t Do Anything: A VeggieTales Movie', 'Comedy'),
+  ('The Pirates Who Don''t Do Anything: A VeggieTales Movie', 'Adventure'),
+  ('VeggieTales: Lord of the Beans', 'Animation'), ('VeggieTales: Lord of the Beans', 'Family'),
+  ('VeggieTales: Lord of the Beans', 'Comedy'),
+  ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 'Fantasy'),
+  ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 'Adventure'),
+  ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 'Family'),
+  ('The Chronicles of Narnia: Prince Caspian', 'Fantasy'),
+  ('The Chronicles of Narnia: Prince Caspian', 'Adventure'),
+  ('The Chronicles of Narnia: Prince Caspian', 'Family'),
+  ('The Chronicles of Narnia: The Voyage of the Dawn Treader', 'Fantasy'),
+  ('The Chronicles of Narnia: The Voyage of the Dawn Treader', 'Adventure'),
+  ('The Chronicles of Narnia: The Voyage of the Dawn Treader', 'Family'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'Fantasy'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 'Adventure'),
+  ('The Lord of the Rings: The Two Towers', 'Fantasy'),
+  ('The Lord of the Rings: The Two Towers', 'Adventure'),
+  ('The Lord of the Rings: The Return of the King', 'Fantasy'),
+  ('The Lord of the Rings: The Return of the King', 'Adventure'),
+  ('The Chosen', 'Drama'), ('The Chosen', 'Biblical'),
+  ('The Promised Land', 'Drama'), ('The Promised Land', 'Biblical'),
+  ('House of David', 'Drama'), ('House of David', 'Biblical')
+) as v (title_name, genre_name)
+join public.titles t on t.name = v.title_name
+join public.genres g on g.name = v.genre_name
+on conflict do nothing;
