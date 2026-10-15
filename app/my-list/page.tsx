@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAccount } from "@/lib/account";
+import { seasonCount } from "@/lib/catalog";
 import type { Title } from "../browse";
 import SiteHeader from "../components/site-header";
 import { TitleCard } from "../components/title-card";
 
 export const metadata: Metadata = { title: "My List · Frontier Max" };
 
-type Row = { titles: Omit<Title, "genres"> | null };
+type Row = { titles: (Omit<Title, "genres" | "seasons"> & { episodes: { season_number: number }[] | null }) | null };
 
 export default async function MyListPage() {
   const { supabase, user, profile } = await getAccount();
@@ -17,11 +18,15 @@ export default async function MyListPage() {
 
   const { data } = await supabase
     .from("watchlist")
-    .select("titles(id, type, name, release_year, poster_url, backdrop_url, logo_url)")
+    .select("titles(id, type, name, release_year, poster_url, backdrop_url, logo_url, episodes(season_number))")
     .eq("profile_id", profile.id)
     .order("added_at", { ascending: false })
     .returns<Row[]>();
-  const titles: Title[] = (data ?? []).flatMap((r) => (r.titles ? [{ ...r.titles, genres: [] }] : []));
+  const titles: Title[] = (data ?? []).flatMap((r) => {
+    if (!r.titles) return [];
+    const { episodes, ...t } = r.titles;
+    return [{ ...t, genres: [], seasons: seasonCount(episodes) }];
+  });
 
   return (
     <>

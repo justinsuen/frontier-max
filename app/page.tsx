@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireProfileIfSignedIn } from "@/lib/account";
+import { seasonCount } from "@/lib/catalog";
 import SiteHeader from "./components/site-header";
 import Browse, { type Collection, type ContinueItem, type Title } from "./browse";
 import type { FeaturedItem } from "./featured";
@@ -10,7 +11,11 @@ const FEATURED_SLUG = "featured";
 // Read the catalog on every request so rows added in Supabase show up right away.
 export const dynamic = "force-dynamic";
 
-type TitleRow = Omit<Title, "genres"> & { genres: { name: string }[] | null; description: string | null };
+type TitleRow = Omit<Title, "genres" | "seasons"> & {
+  genres: { name: string }[] | null;
+  episodes: { season_number: number }[] | null;
+  description: string | null;
+};
 type CollectionRow = {
   slug: string;
   name: string;
@@ -34,7 +39,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const [{ data, error }, { data: collectionRows }] = await Promise.all([
     supabase
       .from("titles")
-      .select("id, type, name, description, release_year, poster_url, backdrop_url, logo_url, genres(name)")
+      .select("id, type, name, description, release_year, poster_url, backdrop_url, logo_url, genres(name), episodes(season_number)")
       .order("name")
       .returns<TitleRow[]>(),
     supabase
@@ -53,9 +58,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     );
   }
   const descriptions = new Map(data.map((t) => [t.id, t.description]));
-  const titles: Title[] = data.map(({ description: _description, ...t }) => ({
+  const titles: Title[] = data.map(({ description: _description, episodes, ...t }) => ({
     ...t,
     genres: (t.genres ?? []).map((g) => g.name),
+    seasons: seasonCount(episodes),
   }));
   const byId = new Map(titles.map((t) => [t.id, t]));
 

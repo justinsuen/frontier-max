@@ -27,6 +27,7 @@ export function Artwork({ title }: { title: Title }) {
     return (
       <span className="tile tile-poster">
         <img src={title.poster_url} alt="" loading="lazy" />
+        <FormatBadge title={title} />
       </span>
     );
   }
@@ -38,6 +39,35 @@ export function Artwork({ title }: { title: Title }) {
           <img className="tile-logo" src={title.logo_url} alt="" loading="lazy" />
         </span>
       )}
+      <FormatBadge title={title} />
+    </span>
+  );
+}
+
+// "MOVIE · 2016" or "SERIES · 5 SEASONS", shown on the tile on hover or keyboard focus
+// so people can tell movies from series in the mixed rows without opening them.
+function FormatBadge({ title }: { title: Title }) {
+  const series = title.type === "series";
+  const detail = series && title.seasons
+    ? `${title.seasons} ${title.seasons === 1 ? "season" : "seasons"}`
+    : title.release_year;
+  return (
+    <span className={`tile-badge ${series ? "is-series" : "is-movie"}`}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {series ? (
+          <>
+            <rect x="3" y="6" width="18" height="12.5" rx="1.5" />
+            <path d="M8.5 21.5h7M9 2.5l3 3.5 3-3.5" />
+          </>
+        ) : (
+          <>
+            <rect x="3" y="4" width="18" height="16" rx="1.5" />
+            <path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4" />
+          </>
+        )}
+      </svg>
+      {series ? "Series" : "Movie"}
+      {detail ? <span className="tile-badge-detail">· {detail}</span> : null}
     </span>
   );
 }

@@ -16,6 +16,8 @@ export type Title = {
   // Transparent title logo laid over the backdrop; the name in text is the fallback.
   logo_url: string | null;
   genres: string[];
+  // Series only: how many seasons are listed.
+  seasons?: number;
 };
 
 export type Collection = { slug: string; name: string; description: string | null; titles: Title[] };
