@@ -1,5 +1,5 @@
 import { requireProfileIfSignedIn } from "@/lib/account";
-import AccountNav from "./components/account-nav";
+import SiteHeader from "./components/site-header";
 import Browse, { type Collection, type ContinueItem, type Title } from "./browse";
 import type { FeaturedItem } from "./featured";
 
@@ -40,7 +40,12 @@ export default async function HomePage() {
   ]);
 
   if (error) {
-    return <Browse titles={[]} message={`Couldn't load titles: ${error.message}`} accountNav={<AccountNav />} />;
+    return (
+      <>
+        <SiteHeader />
+        <Browse titles={[]} message={`Couldn't load titles: ${error.message}`} />
+      </>
+    );
   }
   const descriptions = new Map(data.map((t) => [t.id, t.description]));
   const titles: Title[] = data.map(({ description: _description, ...t }) => ({
@@ -107,15 +112,17 @@ export default async function HomePage() {
   }));
 
   return (
-    <Browse
-      titles={titles}
-      collections={rows}
-      featured={featured}
-      signedIn={Boolean(user)}
-      continueWatching={continueWatching}
-      myList={profile ? myList : undefined}
-      profileName={profile?.name}
-      accountNav={<AccountNav />}
-    />
+    <>
+      <SiteHeader />
+      <Browse
+        titles={titles}
+        collections={rows}
+        featured={featured}
+        signedIn={Boolean(user)}
+        continueWatching={continueWatching}
+        myList={profile ? myList : undefined}
+        profileName={profile?.name}
+      />
+    </>
   );
 }

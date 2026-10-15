@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAccount } from "@/lib/account";
-import AccountNav from "../components/account-nav";
+import SiteHeader from "../components/site-header";
 
 export const metadata: Metadata = { title: "Watch history · Frontier Max" };
 
@@ -37,17 +37,8 @@ export default async function HistoryPage() {
 
   return (
     <>
-      <header className="site-header">
-        <Link href="/" className="logo">
-          Frontier <span>Max</span>
-        </Link>
-        <nav className="header-nav">
-          <Link href="/" className="back-link">
-            ← Browse
-          </Link>
-          <AccountNav />
-        </nav>
-      </header>
+      <SiteHeader />
+      <div className="topbar-spacer" />
       <main className="history-main">
         <p className="eyebrow">{profile.name}</p>
         <h1 className="title-name">Watch history</h1>

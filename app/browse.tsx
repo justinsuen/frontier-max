@@ -1,7 +1,9 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Artwork, TitleCard } from "./components/title-card";
 import Featured, { type FeaturedItem } from "./featured";
 
 export type Title = {
@@ -38,7 +40,6 @@ export default function Browse({
   myList,
   profileName,
   signedIn = false,
-  accountNav,
 }: {
   titles: Title[];
   message?: string;
@@ -49,11 +50,11 @@ export default function Browse({
   myList?: Title[];
   profileName?: string;
   signedIn?: boolean;
-  accountNav: ReactNode;
 }) {
   const [type, setType] = useState<TypeFilter>("all");
   const [genre, setGenre] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  // The header's search box keeps the query in the URL (?q=).
+  const query = useSearchParams().get("q") ?? "";
 
   const genres = useMemo(() => [...new Set(titles.flatMap((t) => t.genres))].sort(), [titles]);
 
@@ -77,22 +78,6 @@ export default function Browse({
 
   return (
     <>
-      <header className={`site-header${showFeatured ? " is-overlay" : ""}`}>
-        <Link href="/" className="logo">
-          Frontier <span>Max</span>
-        </Link>
-        <div className="header-nav">
-          <input
-            className="search"
-            type="search"
-            placeholder="Search titles"
-            aria-label="Search titles"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {accountNav}
-        </div>
-      </header>
 
       {showFeatured ? (
         <>
@@ -106,6 +91,7 @@ export default function Browse({
         </>
       ) : (
         <section className="hero">
+          <div className="topbar-spacer" />
           <p className="eyebrow">
             {profileName
               ? `Welcome back, ${profileName}`
@@ -197,23 +183,6 @@ export default function Browse({
   );
 }
 
-function TitleCard({ title }: { title: Title }) {
-  return (
-    <li className="card">
-      <Link href={`/titles/${title.id}`} className="card-link">
-        <Artwork title={title} />
-        <div className="card-body">
-          <h2 className="card-title">{title.name}</h2>
-          <p className="card-meta">
-            <span className={`badge badge-${title.type}`}>{title.type === "series" ? "Series" : "Movie"}</span>
-            {title.release_year}
-          </p>
-        </div>
-      </Link>
-    </li>
-  );
-}
-
 // A horizontal row of tiles. Arrow buttons page through it; touch screens can also swipe.
 function Row({
   heading,
@@ -291,37 +260,4 @@ function RowTitle({ title }: { title: Title }) {
       </Link>
     </li>
   );
-}
-
-// Landscape artwork for cards: the backdrop with the title logo over a dark fade.
-// Without a backdrop, the poster is shown whole on a navy tile. The title is also
-// written under every card, since some logos are hard to read at this size.
-// Images come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
-function Artwork({ title }: { title: Title }) {
-  if (!isHttpUrl(title.backdrop_url) && isHttpUrl(title.poster_url)) {
-    return (
-      <span className="tile tile-poster">
-        <img src={title.poster_url} alt="" loading="lazy" />
-      </span>
-    );
-  }
-  return (
-    <span className="tile">
-      {isHttpUrl(title.backdrop_url) && <img className="tile-image" src={title.backdrop_url} alt="" loading="lazy" />}
-      {isHttpUrl(title.logo_url) && (
-        <span className="tile-overlay">
-          <img className="tile-logo" src={title.logo_url} alt="" loading="lazy" />
-        </span>
-      )}
-    </span>
-  );
-}
-
-function isHttpUrl(value: string | null): value is string {
-  if (!value) return false;
-  try {
-    return ["http:", "https:"].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
 }

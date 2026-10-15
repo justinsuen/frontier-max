@@ -55,7 +55,6 @@ export default function Watch({
   inWatchlist,
   ratingSummary,
   myRatings,
-  accountNav,
 }: {
   title: TitleDetail;
   progress: Progress[];
@@ -65,7 +64,6 @@ export default function Watch({
   inWatchlist: boolean;
   ratingSummary: RatingSummaryRow[];
   myRatings: { episode_id: number | null; rating: Rating }[];
-  accountNav: ReactNode;
 }) {
   const { episodes } = title;
   const seasons = [...new Set(episodes.map((e) => e.season_number))];
@@ -161,17 +159,7 @@ export default function Watch({
 
   return (
     <>
-      <header className="site-header">
-        <Link href="/" className="logo">
-          Frontier <span>Max</span>
-        </Link>
-        <nav className="header-nav">
-          <Link href="/" className="back-link">
-            ← Browse
-          </Link>
-          {accountNav}
-        </nav>
-      </header>
+      <div className="topbar-spacer" />
 
       <div className="player-wrap" ref={playerRef}>
         <div className="player">

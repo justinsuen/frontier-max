@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getAccount, requireProfileIfSignedIn } from "@/lib/account";
-import AccountNav from "../../components/account-nav";
+import SiteHeader from "../../components/site-header";
 import { getRatingSummary, type Rating, type RatingSummaryRow } from "@/lib/ratings";
 import Watch, { type Episode, type Progress, type TitleDetail } from "./watch";
 
@@ -78,16 +78,18 @@ export default async function TitlePage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <Watch
-      key={profile?.id ?? "guest"}
-      title={title}
-      progress={progress}
-      canTrack={Boolean(profile)}
-      signedIn={Boolean(user)}
-      inWatchlist={inWatchlist}
-      ratingSummary={ratingSummary}
-      myRatings={myRatings}
-      accountNav={<AccountNav />}
-    />
+    <>
+      <SiteHeader />
+      <Watch
+        key={profile?.id ?? "guest"}
+        title={title}
+        progress={progress}
+        canTrack={Boolean(profile)}
+        signedIn={Boolean(user)}
+        inWatchlist={inWatchlist}
+        ratingSummary={ratingSummary}
+        myRatings={myRatings}
+      />
+    </>
   );
 }

@@ -54,17 +54,6 @@ a.logo { color: inherit; text-decoration: none; }
 }
 .back-link:hover { color: var(--text); }
 
-.search {
-  width: min(320px, 50vw);
-  padding: 10px 14px;
-  border: 1px solid rgb(249 248 246 / 0.18);
-  border-radius: var(--radius);
-  background: var(--navy-deep);
-  color: var(--text);
-  font: inherit;
-}
-.search::placeholder { color: rgb(249 248 246 / 0.55); }
-.search:focus { outline: none; border-color: var(--brass); }
 
 /* Navy band with the dot-grid texture, echoing the dark panels on frontiercommons.org. */
 .hero {
@@ -316,8 +305,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .badge-series { color: var(--green); }
 
 @media (max-width: 560px) {
-  .site-header:has(.search) { flex-direction: column; align-items: stretch; }
-  .search { width: 100%; }
   .grid { grid-template-columns: 1fr; gap: 22px; }
 }
 
@@ -332,7 +319,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   white-space: nowrap;
 }
 
-.header-nav { display: flex; align-items: center; gap: 14px; }
 
 .nav-button, .button-outline {
   display: inline-flex;
@@ -417,7 +403,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 }
 .account-menu summary::-webkit-details-marker { display: none; }
 .account-menu summary:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
-.account-name { font-weight: 600; font-size: 0.9rem; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-popup {
   position: absolute;
   right: 0;
@@ -604,12 +589,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .history-episode { color: var(--muted); font-size: 0.9rem; }
 .history-meta { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 0.75rem; }
 
-@media (max-width: 560px) {
-  .site-header:has(.search) .header-nav { width: 100%; }
-  .header-nav .search { flex: 1; min-width: 0; }
-  .account-name { display: none; }
-}
-
 /* ---- Ratings ---- */
 [data-rating="loved"] { --rating: var(--brass); }
 [data-rating="liked"] { --rating: var(--green); }
@@ -765,16 +744,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .card-title { margin: 0 0 6px; font-size: 1rem; }
 
 /* ---- Featured banner ---- */
-/* The header floats over the banner, fading from dark so its links stay readable. */
-.site-header.is-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
-  background: linear-gradient(rgb(10 10 9 / 0.8), transparent);
-}
-.site-header.is-overlay .search { background: rgb(10 10 9 / 0.55); }
 
 .featured {
   position: relative;
@@ -928,3 +897,109 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 @media (max-width: 1100px) { .row-scroller { --cols: 3; } }
 @media (max-width: 760px) { .row-scroller { --cols: 2; --gap: 12px; } }
 @media (max-width: 480px) { .row-scroller { --cols: 1; } }
+
+/* ---- Fixed top bar ---- */
+:root { --topbar-h: 68px; }
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: var(--topbar-h);
+  padding: 0 clamp(16px, 4vw, 48px);
+  /* See-through at the top of the page; solid once scrolled (.is-solid). */
+  background: linear-gradient(rgb(10 10 9 / 0.8), rgb(10 10 9 / 0));
+  transition: background-color 0.25s, box-shadow 0.25s;
+}
+.topbar.is-solid {
+  background: rgb(18 18 16 / 0.94);
+  box-shadow: 0 1px 0 var(--line), 0 8px 24px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(12px);
+}
+.topbar-spacer { height: var(--topbar-h); }
+.topbar .logo { flex: none; color: var(--text); font-size: 1rem; }
+
+.topbar-actions { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.topbar-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.topbar-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.topbar-icon svg circle:not([r="6.5"]) { fill: currentColor; stroke: none; }
+.topbar-icon:hover { background: rgb(249 248 246 / 0.1); }
+.topbar-icon.is-current { color: var(--brass); }
+.topbar-icon:focus-visible, .topbar .logo:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* Search: an icon that opens into a field. */
+.topbar-search {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.topbar-search input {
+  width: 0;
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  opacity: 0;
+  transition: width 0.25s ease, opacity 0.2s;
+}
+.topbar-search input::placeholder { color: rgb(249 248 246 / 0.55); }
+.topbar-search input:focus { outline: none; }
+.topbar-search input::-webkit-search-cancel-button { display: none; }
+.topbar-search.is-open { border-color: rgb(249 248 246 / 0.35); background: rgb(10 10 9 / 0.75); }
+.topbar-search.is-open:focus-within { border-color: var(--brass); }
+.topbar-search.is-open input { width: min(300px, 40vw); padding: 0 2px; opacity: 1; }
+.topbar-close svg { width: 18px; height: 18px; }
+
+.topbar .account-menu summary { padding: 4px; border-radius: var(--radius); }
+.topbar .account-menu summary:hover .avatar { outline: 2px solid var(--text); outline-offset: 2px; }
+.topbar .avatar-sm { width: 34px; height: 34px; }
+.account-popup-name {
+  margin: 0 0 4px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.list-main { padding: 32px clamp(16px, 4vw, 48px) 72px; }
+.list-main .title-name { margin-bottom: 28px; }
+
+@media (max-width: 560px) {
+  :root { --topbar-h: 60px; }
+  /* While searching on a phone, the field takes the logo's place. */
+  .topbar.is-searching .logo { display: none; }
+  .topbar.is-searching .topbar-actions { flex: 1; }
+  .topbar.is-searching .topbar-search { flex: 1; }
+  .topbar-search.is-open input { width: 100%; }
+}
