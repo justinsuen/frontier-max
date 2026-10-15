@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Featured, { type FeaturedItem } from "./featured";
 
 export type Title = {
   id: number;
@@ -32,18 +33,22 @@ export default function Browse({
   titles,
   message,
   collections = [],
+  featured = [],
   continueWatching = [],
   myList,
   profileName,
+  signedIn = false,
   accountNav,
 }: {
   titles: Title[];
   message?: string;
   collections?: Collection[];
+  featured?: FeaturedItem[];
   continueWatching?: ContinueItem[];
   // Undefined when no profile is active (signed out), so the row isn't offered.
   myList?: Title[];
   profileName?: string;
+  signedIn?: boolean;
   accountNav: ReactNode;
 }) {
   const [type, setType] = useState<TypeFilter>("all");
@@ -67,10 +72,12 @@ export default function Browse({
       : visible.length === 0
         ? "Nothing matches those filters."
         : null);
+  // The banner gives way to results while searching.
+  const showFeatured = featured.length > 0 && !q;
 
   return (
     <>
-      <header className="site-header">
+      <header className={`site-header${showFeatured ? " is-overlay" : ""}`}>
         <Link href="/" className="logo">
           Frontier <span>Max</span>
         </Link>
@@ -87,14 +94,26 @@ export default function Browse({
         </div>
       </header>
 
-      <section className="hero">
-        <p className="eyebrow">
-          {profileName
-            ? `Welcome back, ${profileName}`
-            : `${titles.length} ${titles.length === 1 ? "title" : "titles"} in the catalog`}
-        </p>
-        <h1 className="page-title">Find something worth watching.</h1>
-      </section>
+      {showFeatured ? (
+        <>
+          <h1 className="sr-only">Frontier Max</h1>
+          <Featured
+            items={featured}
+            savedIds={(myList ?? []).map((t) => t.id)}
+            canSave={myList !== undefined}
+            signedIn={signedIn}
+          />
+        </>
+      ) : (
+        <section className="hero">
+          <p className="eyebrow">
+            {profileName
+              ? `Welcome back, ${profileName}`
+              : `${titles.length} ${titles.length === 1 ? "title" : "titles"} in the catalog`}
+          </p>
+          <h1 className="page-title">Find something worth watching.</h1>
+        </section>
+      )}
 
       <main>
         {!q && continueWatching.length > 0 && (

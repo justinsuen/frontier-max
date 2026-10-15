@@ -1,11 +1,15 @@
 import { requireProfileIfSignedIn } from "@/lib/account";
 import AccountNav from "./components/account-nav";
 import Browse, { type Collection, type ContinueItem, type Title } from "./browse";
+import type { FeaturedItem } from "./featured";
+
+// The special section whose titles rotate in the banner instead of forming a row.
+const FEATURED_SLUG = "featured";
 
 // Read the catalog on every request so rows added in Supabase show up right away.
 export const dynamic = "force-dynamic";
 
-type TitleRow = Omit<Title, "genres"> & { genres: { name: string }[] | null };
+type TitleRow = Omit<Title, "genres"> & { genres: { name: string }[] | null; description: string | null };
 type CollectionRow = {
   slug: string;
   name: string;
@@ -20,12 +24,12 @@ type ProgressRow = {
 };
 
 export default async function HomePage() {
-  const { supabase, profile } = await requireProfileIfSignedIn("/");
+  const { supabase, user, profile } = await requireProfileIfSignedIn("/");
 
   const [{ data, error }, { data: collectionRows }] = await Promise.all([
     supabase
       .from("titles")
-      .select("id, type, name, release_year, poster_url, backdrop_url, logo_url, genres(name)")
+      .select("id, type, name, description, release_year, poster_url, backdrop_url, logo_url, genres(name)")
       .order("name")
       .returns<TitleRow[]>(),
     supabase
@@ -38,7 +42,11 @@ export default async function HomePage() {
   if (error) {
     return <Browse titles={[]} message={`Couldn't load titles: ${error.message}`} accountNav={<AccountNav />} />;
   }
-  const titles = data.map((t) => ({ ...t, genres: (t.genres ?? []).map((g) => g.name) }));
+  const descriptions = new Map(data.map((t) => [t.id, t.description]));
+  const titles: Title[] = data.map(({ description: _description, ...t }) => ({
+    ...t,
+    genres: (t.genres ?? []).map((g) => g.name),
+  }));
   const byId = new Map(titles.map((t) => [t.id, t]));
 
   // Sections with their titles in order; empty ones are skipped.
@@ -48,6 +56,8 @@ export default async function HomePage() {
       .flatMap((ct) => byId.get(ct.title_id) ?? []);
     return members.length ? [{ slug: c.slug, name: c.name, description: c.description, titles: members }] : [];
   });
+  const featuredTitles = collections.find((c) => c.slug === FEATURED_SLUG)?.titles.slice(0, 5) ?? [];
+  const rows = collections.filter((c) => c.slug !== FEATURED_SLUG);
 
   let continueWatching: ContinueItem[] = [];
   let myList: Title[] = [];
@@ -86,10 +96,22 @@ export default async function HomePage() {
     myList = (watchlist.data ?? []).flatMap((w) => byId.get(w.title_id) ?? []);
   }
 
+  // "Resume" on the banner when this profile is partway through a featured title.
+  const resumeLabels = new Map(continueWatching.map((c) => [c.title.id, c.label]));
+  const featured: FeaturedItem[] = featuredTitles.map((title) => ({
+    title,
+    description: descriptions.get(title.id) ?? null,
+    playLabel: resumeLabels.has(title.id)
+      ? `Resume${resumeLabels.get(title.id) ? ` ${resumeLabels.get(title.id)!.split(" · ").slice(0, 2).join(" · ")}` : ""}`
+      : "Play",
+  }));
+
   return (
     <Browse
       titles={titles}
-      collections={collections}
+      collections={rows}
+      featured={featured}
+      signedIn={Boolean(user)}
       continueWatching={continueWatching}
       myList={profile ? myList : undefined}
       profileName={profile?.name}

@@ -274,7 +274,7 @@ where not exists (
 -- Three broad sections, each wider than one screen. Sections not listed here
 -- are removed; re-running updates names and adds any missing titles.
 delete from public.collections
-where slug not in ('faith-and-courage', 'epic-adventures', 'family-movie-night');
+where slug not in ('featured', 'faith-and-courage', 'epic-adventures', 'family-movie-night');
 
 insert into public.collections (slug, name, description, sort_order)
 values
@@ -312,6 +312,25 @@ from (values
   ('family-movie-night', 'The Chronicles of Narnia: The Voyage of the Dawn Treader', 9)
 ) as v (slug, title_name, position)
 join public.collections c on c.slug = v.slug
+join public.titles t on t.name = v.title_name
+on conflict (collection_id, title_id) do update set position = excluded.position;
+
+-- The rotating banner at the top of the home page: the "featured" section.
+-- Its titles (the first 5, by position) show in the banner rather than as a row.
+insert into public.collections (slug, name, description, sort_order)
+values ('featured', 'Featured', 'Shown in the banner at the top of the home page.', 0)
+on conflict (slug) do update set name = excluded.name, description = excluded.description;
+
+insert into public.collection_titles (collection_id, title_id, position)
+select c.id, t.id, v.position
+from (values
+  ('The Chosen', 1),
+  ('Hacksaw Ridge', 2),
+  ('The Lord of the Rings: The Fellowship of the Ring', 3),
+  ('Klaus', 4),
+  ('House of David', 5)
+) as v (title_name, position)
+join public.collections c on c.slug = 'featured'
 join public.titles t on t.name = v.title_name
 on conflict (collection_id, title_id) do update set position = excluded.position;
 
