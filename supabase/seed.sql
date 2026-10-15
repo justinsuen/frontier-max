@@ -1,4 +1,4 @@
--- Placeholder catalog: nine movies whose video_url is the official or studio trailer on YouTube.
+-- Placeholder catalog: movies whose video_url is the official or studio trailer on YouTube.
 -- Paste into Supabase → SQL Editor and click Run. Safe to run more than once:
 -- a movie is skipped if a title with the same name already exists.
 -- Posters are from The Movie Database (themoviedb.org).
@@ -41,6 +41,30 @@ from (values
   ('VeggieTales: Lord of the Beans', 2005,
    'https://image.tmdb.org/t/p/w500/yOVOirMvCe74fy3l0WjrL9ABCYw.jpg',
    'https://www.youtube.com/watch?v=oOpsRvwIW-I',
-   'A VeggieTales spoof of The Lord of the Rings about a young hero who is handed a magic bean and learns to use his gifts to help others.')
+   'A VeggieTales spoof of The Lord of the Rings about a young hero who is handed a magic bean and learns to use his gifts to help others.'),
+  ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 2005,
+   'https://image.tmdb.org/t/p/w500/iREd0rNCjYdf5Ar0vfaW32yrkm.jpg',
+   'https://www.youtube.com/watch?v=usEkWtuNn-w',
+   'Four siblings step through a wardrobe into Narnia, a land frozen in endless winter by the White Witch, and join the great lion Aslan to set it free.'),
+  ('The Chronicles of Narnia: Prince Caspian', 2008,
+   'https://image.tmdb.org/t/p/w500/qxz3WIyjZiSKUhaTIEJ3c1GcC9z.jpg',
+   'https://www.youtube.com/watch?v=oZRZ-2et2uY',
+   'The Pevensie children return to Narnia centuries later to help the exiled Prince Caspian win back his throne from his tyrant uncle.'),
+  ('The Chronicles of Narnia: The Voyage of the Dawn Treader', 2010,
+   'https://image.tmdb.org/t/p/w500/pP27zlm9yeKrCeDZLFLP2HKELot.jpg',
+   'https://www.youtube.com/watch?v=AON1-Ox-Llc',
+   'Edmund, Lucy and their cousin Eustace sail with King Caspian toward the edge of the world on a quest to find seven lost lords of Narnia.'),
+  ('The Lord of the Rings: The Fellowship of the Ring', 2001,
+   'https://image.tmdb.org/t/p/w500/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg',
+   'https://www.youtube.com/watch?v=V75dMMIW2B4',
+   'The hobbit Frodo inherits a ring of terrible power and sets out with eight companions to destroy it before the Dark Lord Sauron can reclaim it.'),
+  ('The Lord of the Rings: The Two Towers', 2002,
+   'https://image.tmdb.org/t/p/w500/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg',
+   'https://www.youtube.com/watch?v=LbfMDwc4azU',
+   'With the fellowship broken, Frodo and Sam press on toward Mordor guided by Gollum, while their friends rally the kingdom of Rohan against Saruman''s army.'),
+  ('The Lord of the Rings: The Return of the King', 2003,
+   'https://image.tmdb.org/t/p/w500/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg',
+   'https://www.youtube.com/watch?v=r5X-hFf6Bwo',
+   'As the armies of Middle-earth make a final stand against Sauron, Frodo and Sam struggle up Mount Doom to destroy the One Ring.')
 ) as v (name, release_year, poster_url, video_url, description)
 where not exists (select 1 from public.titles t where t.name = v.name);
