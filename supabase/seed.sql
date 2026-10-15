@@ -68,3 +68,22 @@ from (values
    'As the armies of Middle-earth make a final stand against Sauron, Frodo and Sam struggle up Mount Doom to destroy the One Ring.')
 ) as v (name, release_year, poster_url, video_url, description)
 where not exists (select 1 from public.titles t where t.name = v.name);
+
+-- TV series. Until real episodes are added to public.episodes, video_url holds the series trailer.
+insert into public.titles (type, name, release_year, poster_url, video_url, description)
+select 'series', v.name, v.release_year, v.poster_url, v.video_url, v.description
+from (values
+  ('The Chosen', 2019,
+   'https://image.tmdb.org/t/p/w500/nr0r7YTn1l84KLG1iCSO5ofHTvO.jpg',
+   'https://www.youtube.com/watch?v=K1-FoFj8Jbo',
+   'A multi-season drama about the life of Jesus, told through the eyes of the fishermen, tax collectors and outcasts who met him and chose to follow.'),
+  ('The Promised Land', 2024,
+   'https://image.tmdb.org/t/p/w500/jIlNISf8GhenOBudlQQwzQzTVxV.jpg',
+   'https://www.youtube.com/watch?v=MN54fod_YzQ',
+   'Moses and his family lead the Israelites out of Egypt and find that the hardest part of the journey to the promised land is the people themselves.'),
+  ('House of David', 2025,
+   'https://image.tmdb.org/t/p/w500/i4eskPIEI5sK0IibHhWqBU9Ts0k.jpg',
+   'https://www.youtube.com/watch?v=GrGfIHBIVL4',
+   'A young shepherd named David rises from obscurity as King Saul''s reign begins to crumble, setting him on the path to becoming Israel''s most celebrated king.')
+) as v (name, release_year, poster_url, video_url, description)
+where not exists (select 1 from public.titles t where t.name = v.name);
