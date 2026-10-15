@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import "./globals.css";
+
+// Same type pairing as frontiercommons.org.
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" });
+const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "Frontier Max",
@@ -8,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${manrope.variable} ${plexMono.variable}`}>
       <body>{children}</body>
     </html>
   );

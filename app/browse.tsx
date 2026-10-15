@@ -45,9 +45,9 @@ export default function Browse({ titles, message }: { titles: Title[]; message?:
   return (
     <>
       <header className="site-header">
-        <h1 className="logo">
+        <p className="logo">
           Frontier <span>Max</span>
-        </h1>
+        </p>
         <input
           className="search"
           type="search"
@@ -57,6 +57,11 @@ export default function Browse({ titles, message }: { titles: Title[]; message?:
           onChange={(e) => setQuery(e.target.value)}
         />
       </header>
+
+      <section className="hero">
+        <p className="eyebrow">{titles.length} {titles.length === 1 ? "title" : "titles"} in the catalog</p>
+        <h1 className="page-title">Find something worth watching.</h1>
+      </section>
 
       <main>
         <nav className="filters" aria-label="Filters">
@@ -111,7 +116,7 @@ function TitleCard({ title }: { title: Title }) {
       <div className="card-body">
         <h2 className="card-title">{title.name}</h2>
         <p className="card-meta">
-          <span className="badge">{title.type === "series" ? "Series" : "Movie"}</span>
+          <span className={`badge badge-${title.type}`}>{title.type === "series" ? "Series" : "Movie"}</span>
           {title.release_year}
         </p>
       </div>
