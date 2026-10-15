@@ -31,16 +31,35 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The brand dot grid: fixed behind the whole screen, strongest at the top and
-   easing to about a third toward the bottom so it never competes with content. */
+/* The brand dot grid, fixed behind the whole screen. It only shows through a few
+   soft, overlapping clouds of different sizes and strengths, like halftone shading,
+   instead of as even wallpaper. DotField (components/dot-field.tsx) moves the
+   clouds to new random spots on each visit; these are the starting positions. */
+:root {
+  --dots-1: 14% 16%;
+  --dots-2: 86% 10%;
+  --dots-3: 72% 64%;
+  --dots-4: 18% 82%;
+  --dots-5: 46% 42%;
+}
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(rgb(160 172 255 / 0.16) 1.3px, transparent 1.8px) 0 0 / 24px 24px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 100%);
+  background: radial-gradient(rgb(160 172 255 / 0.2) 1.3px, transparent 1.8px) 0 0 / 22px 22px;
+  -webkit-mask-image:
+    radial-gradient(42vw 34vh at var(--dots-1), #000, rgb(0 0 0 / 0.4) 50%, transparent 72%),
+    radial-gradient(30vw 40vh at var(--dots-2), rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.3) 50%, transparent 70%),
+    radial-gradient(48vw 30vh at var(--dots-3), rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.25) 50%, transparent 72%),
+    radial-gradient(26vw 32vh at var(--dots-4), rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.35) 50%, transparent 70%),
+    radial-gradient(20vw 24vh at var(--dots-5), rgb(0 0 0 / 0.5), transparent 70%);
+  mask-image:
+    radial-gradient(42vw 34vh at var(--dots-1), #000, rgb(0 0 0 / 0.4) 50%, transparent 72%),
+    radial-gradient(30vw 40vh at var(--dots-2), rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.3) 50%, transparent 70%),
+    radial-gradient(48vw 30vh at var(--dots-3), rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.25) 50%, transparent 72%),
+    radial-gradient(26vw 32vh at var(--dots-4), rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.35) 50%, transparent 70%),
+    radial-gradient(20vw 24vh at var(--dots-5), rgb(0 0 0 / 0.5), transparent 70%);
   pointer-events: none;
 }
 
