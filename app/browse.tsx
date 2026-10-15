@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type Title = {
   id: number;
@@ -11,6 +11,8 @@ export type Title = {
   poster_url: string | null;
   // Wide 16:9 image used for the cards; the poster is the fallback.
   backdrop_url: string | null;
+  // Transparent title logo laid over the backdrop; the name in text is the fallback.
+  logo_url: string | null;
   genres: string[];
 };
 
@@ -104,7 +106,6 @@ export default function Browse({
                   <span className="progress-bar" aria-hidden="true">
                     <span style={{ width: `${Math.max(item.percent, 3)}%` }} />
                   </span>
-                  <span className="row-title">{item.title.name}</span>
                   {item.label && <span className="row-label">{item.label}</span>}
                 </Link>
               </li>
@@ -182,7 +183,6 @@ function TitleCard({ title }: { title: Title }) {
       <Link href={`/titles/${title.id}`} className="card-link">
         <Artwork title={title} />
         <div className="card-body">
-          <h2 className="card-title">{title.name}</h2>
           <p className="card-meta">
             <span className={`badge badge-${title.type}`}>{title.type === "series" ? "Series" : "Movie"}</span>
             {title.release_year}
@@ -193,6 +193,7 @@ function TitleCard({ title }: { title: Title }) {
   );
 }
 
+// A horizontal row of tiles. Arrow buttons page through it; touch screens can also swipe.
 function Row({
   heading,
   description,
@@ -204,13 +205,58 @@ function Row({
   id?: string;
   children: ReactNode;
 }) {
+  const scroller = useRef<HTMLUListElement>(null);
+  const [canBack, setCanBack] = useState(false);
+  const [canForward, setCanForward] = useState(false);
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const update = () => {
+      setCanBack(el.scrollLeft > 4);
+      setCanForward(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Moves by most of a screen so the last visible tile stays in view for context.
+  const page = (direction: 1 | -1) => {
+    const el = scroller.current;
+    el?.scrollBy({ left: direction * el.clientWidth * 0.85, behavior: "smooth" });
+  };
+
   return (
     <section className="row" id={id} aria-label={heading}>
       <div className="row-head">
         <h2 className="row-heading">{heading}</h2>
         {description && <p className="row-description">{description}</p>}
       </div>
-      <ul className="row-scroller">{children}</ul>
+      <div className="row-track">
+        <ul className="row-scroller" ref={scroller}>
+          {children}
+        </ul>
+        {canBack && (
+          <button className="row-arrow is-back" onClick={() => page(-1)} aria-label={`Previous ${heading}`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+        )}
+        {canForward && (
+          <button className="row-arrow is-forward" onClick={() => page(1)} aria-label={`More ${heading}`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -220,27 +266,35 @@ function RowTitle({ title }: { title: Title }) {
     <li className="row-item">
       <Link href={`/titles/${title.id}`} className="card-link">
         <Artwork title={title} />
-        <span className="row-title">{title.name}</span>
       </Link>
     </li>
   );
 }
 
-// Landscape artwork for cards: the backdrop, else the poster shown whole on a
-// navy backing, else the title's first letter.
+// Landscape artwork for cards: the backdrop with the title logo (or the name in
+// text) over a dark fade. Without a backdrop, the poster is shown whole on a navy
+// tile, since posters already carry the title.
 // Images come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
 function Artwork({ title }: { title: Title }) {
-  if (isHttpUrl(title.backdrop_url)) {
-    return <img className="tile" src={title.backdrop_url} alt="" loading="lazy" />;
-  }
-  if (isHttpUrl(title.poster_url)) {
+  if (!isHttpUrl(title.backdrop_url) && isHttpUrl(title.poster_url)) {
     return (
       <span className="tile tile-poster">
-        <img src={title.poster_url} alt="" loading="lazy" />
+        <img src={title.poster_url} alt={title.name} loading="lazy" />
       </span>
     );
   }
-  return <span className="tile">{title.name.charAt(0).toUpperCase()}</span>;
+  return (
+    <span className="tile">
+      {isHttpUrl(title.backdrop_url) && <img className="tile-image" src={title.backdrop_url} alt="" loading="lazy" />}
+      <span className="tile-overlay">
+        {isHttpUrl(title.logo_url) ? (
+          <img className="tile-logo" src={title.logo_url} alt={title.name} loading="lazy" />
+        ) : (
+          <span className="tile-name">{title.name}</span>
+        )}
+      </span>
+    </span>
+  );
 }
 
 function isHttpUrl(value: string | null): value is string {

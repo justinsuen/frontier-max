@@ -298,15 +298,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 
 
 .card-body { padding: 10px 2px 0; }
-.card-title {
-  margin: 0 0 6px;
-  overflow: hidden;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .card-meta {
   display: flex;
   align-items: center;
@@ -574,19 +565,9 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   padding: 0 0 8px;
   list-style: none;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
 }
-.row-item { scroll-snap-align: start; }
-.row-title {
-  display: block;
-  margin-top: 8px;
-  overflow: hidden;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.row-label { display: block; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 0.7rem; }
+
+.row-label { display: block; margin-top: 6px; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 0.7rem; }
 .row-empty { grid-column: 1 / -1; color: var(--muted); font-size: 0.9rem; }
 
 .progress-bar {
@@ -693,6 +674,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 
 /* ---- Landscape cards ---- */
 .tile {
+  position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 16 / 9;
@@ -709,6 +691,32 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   overflow: hidden;
 }
 .tile-poster img { height: 100%; width: auto; }
+.tile-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Dark fade at the bottom so the logo or name reads on any backdrop. */
+.tile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 10% 7% 7%;
+  background: linear-gradient(to top, rgb(10 10 9 / 0.85) 0%, rgb(10 10 9 / 0.35) 45%, transparent 70%);
+}
+.tile-logo {
+  max-width: 62%;
+  max-height: 46%;
+  object-fit: contain;
+  object-position: left bottom;
+  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 0.7));
+}
+.tile-name {
+  max-width: 100%;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-align: left;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
+}
 .card:hover .tile, .row-item:hover .tile { outline: 1px solid var(--brass); }
 .card-link:focus-visible .tile { outline: 2px solid var(--brass); outline-offset: 2px; }
 
@@ -717,3 +725,34 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   .row-scroller { grid-auto-columns: minmax(180px, 200px); }
   .tile { font-size: 1.75rem; }
 }
+
+/* ---- Row arrows (scrollbars hidden) ---- */
+.row-track { position: relative; }
+.row-scroller { scrollbar-width: none; scroll-behavior: smooth; }
+.row-scroller::-webkit-scrollbar { display: none; }
+.row-arrow {
+  position: absolute;
+  top: 0;
+  bottom: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+}
+.row-arrow.is-back { left: calc(-1 * clamp(16px, 4vw, 48px)); background: linear-gradient(to right, var(--bg) 35%, transparent); }
+.row-arrow.is-forward { right: calc(-1 * clamp(16px, 4vw, 48px)); background: linear-gradient(to left, var(--bg) 35%, transparent); }
+.row-arrow svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s;
+}
+.row-arrow:hover svg { transform: scale(1.2); color: var(--brass); }
+.row-arrow:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }

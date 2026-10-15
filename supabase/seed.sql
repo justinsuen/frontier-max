@@ -387,3 +387,27 @@ from (values
   ('House of David', 'tWLGlPOYgiqkFgm3S1ub2MeXFGJ.jpg')
 ) as v (name, image)
 where t.name = v.name and t.backdrop_url is null;
+
+-- Title logos (from The Movie Database). Needs the 20261015070000 migration.
+update public.titles t
+set logo_url = 'https://image.tmdb.org/t/p/w500/' || v.image
+from (values
+  ('Hacksaw Ridge', 'gAv138RfAa2oWd7xAQqE9mwt2sU.png'),
+  ('The Ultimate Gift', 'c12Bt3Zb73dKvB4cWuoG2EbVjO4.png'),
+  ('End of the Spear', 'svU2JD8S8L0gP4oVLL4s3f6KoWV.png'),
+  ('Unbroken', 'csVuItTrhq97TfaxZFtvCQPUrUN.png'),
+  ('The Best Christmas Pageant Ever', 'd29NHm5Hu85cH6hlhBAVfqIjItZ.png'),
+  ('Klaus', '7fqtf9iQCrmF05Nsk2qjZsgxOpu.png'),
+  ('Jonah: A VeggieTales Movie', 'mtXBVv6MYF9BFIN7Q7Ef2G3DbTQ.png'),
+  ('The Pirates Who Don''t Do Anything: A VeggieTales Movie', 'yRn93aKRCEnE7IzDSmGCMKUqqsP.png'),
+  ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', '3NiYgbqQVPfTKwG4HWPusfAIPav.png'),
+  ('The Chronicles of Narnia: Prince Caspian', 'bXYYTYBZBTj9C9BwyoxG83Ir6S0.png'),
+  ('The Chronicles of Narnia: The Voyage of the Dawn Treader', 'oVy4qtKNJRI1q8NHZPpNM02g2FH.png'),
+  ('The Lord of the Rings: The Fellowship of the Ring', '87sl6r7n7Qx0fALtLZFxM3mU3KM.png'),
+  ('The Lord of the Rings: The Two Towers', 'wQKPueRWijP8kxqVvT4KtkjFHJ0.png'),
+  ('The Lord of the Rings: The Return of the King', 'mZtF6SOsVddoK3I3VLi2oTZ5BR2.png'),
+  ('The Chosen', '8oywdWTaWK7CZN9NsZWrQkTZTWw.png'),
+  ('The Promised Land', 'gPJMSXwpH4yQfWbaTbHfbTQdtZY.png'),
+  ('House of David', '16AAtyXLWCIQThpS5LQXvZJY0bd.png')
+) as v (name, image)
+where t.name = v.name and t.logo_url is null;
