@@ -103,16 +103,26 @@ export default function Player({
     );
   }
 
-  return <FilePlayer key={source.src} src={source.src} startAt={source.startAt} reportRef={reportRef} />;
+  return (
+    <FilePlayer
+      key={source.src}
+      src={source.src}
+      startAt={source.startAt}
+      autoplay={source.autoplay}
+      reportRef={reportRef}
+    />
+  );
 }
 
 function FilePlayer({
   src,
   startAt,
+  autoplay,
   reportRef,
 }: {
   src: string;
   startAt: number;
+  autoplay: boolean;
   reportRef: React.RefObject<((r: PlaybackReport) => void) | undefined>;
 }) {
   const lastSent = useRef(0);
@@ -131,6 +141,7 @@ function FilePlayer({
       src={src}
       controls
       playsInline
+      autoPlay={autoplay}
       onLoadedMetadata={(e) => {
         if (startAt > 0) e.currentTarget.currentTime = startAt;
       }}

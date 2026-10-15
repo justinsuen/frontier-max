@@ -2,7 +2,7 @@
 // "youtube" embeds can report playback position through YouTube's player API; Vimeo embeds can't (yet).
 export type VideoSource =
   | { kind: "embed"; provider: "youtube" | "vimeo"; src: string }
-  | { kind: "file"; src: string; startAt: number };
+  | { kind: "file"; src: string; startAt: number; autoplay: boolean };
 
 export function parseHttpUrl(url: string | null): URL | null {
   if (!url) return null;
@@ -33,7 +33,8 @@ export function videoThumbnail(url: string | null): string | null {
 }
 
 // `resumeAt` (seconds) overrides any start time in the link, to continue where a viewer left off.
-export function videoSource(url: string | null, resumeAt = 0): VideoSource | null {
+// `autoplay` starts playback as soon as the player loads (used after the viewer presses play).
+export function videoSource(url: string | null, resumeAt = 0, autoplay = false): VideoSource | null {
   const u = parseHttpUrl(url);
   if (!u) return null;
   const linkStart = parseInt(u.searchParams.get("t") ?? u.searchParams.get("start") ?? "", 10) || 0;
@@ -41,7 +42,12 @@ export function videoSource(url: string | null, resumeAt = 0): VideoSource | nul
 
   const ytId = youtubeId(u);
   if (ytId) {
-    const params = new URLSearchParams({ rel: "0", enablejsapi: "1", ...(start > 0 ? { start: String(start) } : {}) });
+    const params = new URLSearchParams({
+      rel: "0",
+      enablejsapi: "1",
+      ...(start > 0 ? { start: String(start) } : {}),
+      ...(autoplay ? { autoplay: "1" } : {}),
+    });
     return { kind: "embed", provider: "youtube", src: `https://www.youtube-nocookie.com/embed/${ytId}?${params}` };
   }
 
@@ -50,10 +56,10 @@ export function videoSource(url: string | null, resumeAt = 0): VideoSource | nul
     return {
       kind: "embed",
       provider: "vimeo",
-      src: `https://player.vimeo.com/video/${vimeoId}${start > 0 ? `#t=${start}s` : ""}`,
+      src: `https://player.vimeo.com/video/${vimeoId}${autoplay ? "?autoplay=1" : ""}${start > 0 ? `#t=${start}s` : ""}`,
     };
   }
 
   // Anything else is treated as a direct video file (e.g. .mp4 in Supabase Storage).
-  return { kind: "file", src: u.toString(), startAt: start };
+  return { kind: "file", src: u.toString(), startAt: start, autoplay };
 }

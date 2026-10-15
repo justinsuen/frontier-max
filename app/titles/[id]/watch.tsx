@@ -26,6 +26,8 @@ export type TitleDetail = {
   description: string | null;
   release_year: number | null;
   poster_url: string | null;
+  // Wide image without title text, used behind the play button before playback.
+  backdrop_url: string | null;
   video_url: string | null;
   genres: string[];
   episodes: Episode[];
@@ -76,6 +78,9 @@ export default function Watch({
     current?.season_number ?? episodes.find((e) => videoSource(e.video_url))?.season_number ?? seasons[0] ?? 1
   );
   const playerRef = useRef<HTMLDivElement>(null);
+  // The page opens on a still with a play button; the video loads when it's pressed
+  // (or when an episode is picked from the list).
+  const [started, setStarted] = useState(false);
   const lastSaved = useRef<Record<string, number>>({});
   // Totals for items this profile has rated; the server sends no others.
   const [counts, setCounts] = useState<Record<string, RatingCounts>>(() =>
@@ -123,7 +128,7 @@ export default function Watch({
       .catch(() => {});
   }
 
-  const source = videoSource(current ? current.video_url : title.video_url, selection.resumeAt);
+  const source = videoSource(current ? current.video_url : title.video_url, selection.resumeAt, started);
   const nowPlaying = current
     ? episodeLabel(current)
     : title.type === "series" && title.video_url
@@ -132,6 +137,7 @@ export default function Watch({
 
   function play(key: string) {
     setSelection({ key, resumeAt: resumePoint(progress[key]) });
+    setStarted(true);
     playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -163,11 +169,20 @@ export default function Watch({
 
       <div className="player-wrap" ref={playerRef}>
         <div className="player">
-          <Player
-            source={source}
-            label={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
-            onReport={canTrack ? onReport : undefined}
-          />
+          {started || !source ? (
+            <Player
+              source={source}
+              label={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
+              onReport={canTrack ? onReport : undefined}
+            />
+          ) : (
+            <PosterFrame
+              image={posterImage(title, current)}
+              label={nowPlaying ? `Play ${title.name}: ${nowPlaying}` : `Play ${title.name}`}
+              resumeAt={selection.resumeAt}
+              onPlay={() => setStarted(true)}
+            />
+          )}
         </div>
       </div>
 
@@ -505,4 +520,43 @@ function RatingPanel({
       )}
     </section>
   );
+}
+
+// The still shown before playback: an episode's own still if it has one, otherwise
+// the title's backdrop (both come without title text), at a large size.
+function posterImage(title: TitleDetail, episode: Episode | undefined) {
+  const url = parseHttpUrl(episode?.thumbnail_url ?? null) ?? parseHttpUrl(title.backdrop_url);
+  return url ? url.toString().replace(/\/t\/p\/w\d+\//, "/t/p/w1280/") : null;
+}
+
+function PosterFrame({
+  image,
+  label,
+  resumeAt,
+  onPlay,
+}: {
+  image: string | null;
+  label: string;
+  resumeAt: number;
+  onPlay: () => void;
+}) {
+  return (
+    <button className="poster-frame" onClick={onPlay} aria-label={label}>
+      {image && <img src={image} alt="" />}
+      <span className="poster-frame-play" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5.5v13l11-6.5z" />
+        </svg>
+      </span>
+      {resumeAt > 0 && <span className="poster-frame-resume">Resume from {formatTime(resumeAt)}</span>}
+    </button>
+  );
+}
+
+function formatTime(seconds: number) {
+  const s = Math.floor(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
