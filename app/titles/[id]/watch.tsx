@@ -323,16 +323,8 @@ export default function Watch({
               )}
             </div>
 
+            {/* The trailer isn't listed here; it has its own button by Rate. */}
             <ol className="episode-list">
-              {title.video_url && (
-                <EpisodeRow
-                  label="Trailer"
-                  thumbnail={videoThumbnail(title.video_url)}
-                  active={selection.key === "main"}
-                  progress={progress.main}
-                  onPlay={() => play("main")}
-                />
-              )}
               {episodes
                 .filter((e) => e.season_number === season)
                 .map((e) => (
