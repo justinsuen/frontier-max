@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireProfileIfSignedIn } from "@/lib/account";
 import SiteHeader from "./components/site-header";
 import Browse, { type Collection, type ContinueItem, type Title } from "./browse";
@@ -23,7 +24,11 @@ type ProgressRow = {
   episodes: { season_number: number; episode_number: number; name: string | null } | null;
 };
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  // Search used to live on the home page; send old ?q= links to the search page.
+  const { q } = await searchParams;
+  if (q) redirect(`/search?q=${encodeURIComponent(q)}`);
+
   const { supabase, user, profile } = await requireProfileIfSignedIn("/");
 
   const [{ data, error }, { data: collectionRows }] = await Promise.all([

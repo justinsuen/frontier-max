@@ -644,14 +644,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .row-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 16px; }
 .row-head .row-heading { margin: 0; }
 .row-description { margin: 0; color: var(--muted); font-size: 0.95rem; }
-.section-heading {
-  margin: 40px 0 16px;
-  padding-top: 24px;
-  border-top: 1px solid var(--line);
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 500;
-  letter-spacing: -0.03em;
-}
 
 /* ---- Landscape cards ---- */
 .tile {
@@ -947,39 +939,10 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   stroke-linejoin: round;
 }
 /* Filled bookmark on the My List page itself. */
-.topbar-icon.is-current svg path { fill: currentColor; }
+.topbar-icon.is-current svg path[d^="M6.5"] { fill: currentColor; }
 .topbar-icon:hover { background: rgb(249 248 246 / 0.1); }
 .topbar-icon.is-current { color: var(--brass); }
 .topbar-icon:focus-visible, .topbar .logo:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
-
-/* Search: an icon that opens into a field. */
-.topbar-search {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  transition: background-color 0.2s, border-color 0.2s;
-}
-.topbar-search input {
-  width: 0;
-  min-width: 0;
-  height: 40px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  opacity: 0;
-  transition: width 0.25s ease, opacity 0.2s;
-}
-.topbar-search input::placeholder { color: rgb(249 248 246 / 0.55); }
-.topbar-search input:focus { outline: none; }
-.topbar-search input::-webkit-search-cancel-button { display: none; }
-.topbar-search.is-open { border-color: rgb(249 248 246 / 0.35); background: rgb(10 10 9 / 0.75); }
-.topbar-search.is-open:focus-within { border-color: var(--brass); }
-.topbar-search.is-open input { width: min(300px, 40vw); padding: 0 2px; opacity: 1; }
-.topbar-close svg { width: 18px; height: 18px; }
 
 .topbar .account-menu summary { padding: 4px; border-radius: var(--radius); }
 .topbar .account-menu summary:hover .avatar { outline: 2px solid var(--text); outline-offset: 2px; }
@@ -997,9 +960,63 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 
 @media (max-width: 560px) {
   :root { --topbar-h: 60px; }
-  /* While searching on a phone, the field takes the logo's place. */
-  .topbar.is-searching .logo { display: none; }
-  .topbar.is-searching .topbar-actions { flex: 1; }
-  .topbar.is-searching .topbar-search { flex: 1; }
-  .topbar-search.is-open input { width: 100%; }
 }
+
+/* ---- Search page ---- */
+.search-main { padding: 28px clamp(16px, 4vw, 48px) 72px; }
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 760px;
+  margin-bottom: 24px;
+  padding: 0 14px 0 18px;
+  border: 1px solid rgb(249 248 246 / 0.25);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.search-bar:focus-within { border-color: var(--brass); }
+.search-bar svg {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.search-bar input {
+  flex: 1;
+  min-width: 0;
+  height: 60px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+}
+.search-bar input::placeholder { color: rgb(249 248 246 / 0.45); }
+.search-bar input:focus { outline: none; }
+.search-bar input::-webkit-search-cancel-button { display: none; }
+.search-clear {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+}
+.search-clear:hover { background: var(--surface-2); }
+.search-clear svg { width: 18px; height: 18px; stroke: var(--text); }
+.search-clear:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.search-heading {
+  margin: 8px 0 18px;
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.browse-more { margin: 8px 0 0; color: var(--muted); }
+.browse-more a { color: var(--brass); font-weight: 600; }

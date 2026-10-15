@@ -1,9 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Artwork, TitleCard } from "./components/title-card";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Artwork } from "./components/title-card";
 import Featured, { type FeaturedItem } from "./featured";
 
 export type Title = {
@@ -22,14 +21,6 @@ export type Title = {
 export type Collection = { slug: string; name: string; description: string | null; titles: Title[] };
 
 export type ContinueItem = { title: Title; label: string | null; percent: number };
-
-type TypeFilter = "all" | Title["type"];
-
-const TABS: { value: TypeFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "movie", label: "Movies" },
-  { value: "series", label: "Series" },
-];
 
 export default function Browse({
   titles,
@@ -51,28 +42,7 @@ export default function Browse({
   profileName?: string;
   signedIn?: boolean;
 }) {
-  const [type, setType] = useState<TypeFilter>("all");
-  const [genre, setGenre] = useState<string | null>(null);
-  // The header's search box keeps the query in the URL (?q=).
-  const query = useSearchParams().get("q") ?? "";
-
-  const genres = useMemo(() => [...new Set(titles.flatMap((t) => t.genres))].sort(), [titles]);
-
-  const q = query.trim().toLowerCase();
-  const visible = titles.filter(
-    (t) =>
-      (type === "all" || t.type === type) &&
-      (!genre || t.genres.includes(genre)) &&
-      (!q || t.name.toLowerCase().includes(q))
-  );
-
-  const status =
-    message ??
-    (titles.length === 0
-      ? "No titles yet. Add some in Supabase's Table Editor."
-      : visible.length === 0
-        ? "Nothing matches those filters."
-        : null);
+  const status = message ?? (titles.length === 0 ? "No titles yet. Add some in Supabase's Table Editor." : null);
   const continueRow =
     continueWatching.length > 0 ? (
       <Row heading="Continue watching">
@@ -91,13 +61,9 @@ export default function Browse({
       </Row>
     ) : null;
 
-  // The banner gives way to results while searching.
-  const showFeatured = featured.length > 0 && !q;
-
   return (
     <>
-
-      {showFeatured ? (
+      {featured.length > 0 ? (
         <>
           <h1 className="sr-only">Frontier Max</h1>
           <Featured
@@ -120,60 +86,22 @@ export default function Browse({
       )}
 
       <main>
-        {!q &&
-          collections.map((c, i) => (
-            <Fragment key={c.slug}>
-              <Row heading={c.name} description={c.description} id={c.slug}>
-                {c.titles.map((title) => (
-                  <RowTitle key={title.id} title={title} />
-                ))}
-              </Row>
-              {/* Continue watching sits after the first section. */}
-              {i === 0 && continueRow}
-            </Fragment>
-          ))}
-        {!q && collections.length === 0 && continueRow}
-
-        {!q && collections.length > 0 && (
-          <h2 className="section-heading" id="all-titles">
-            All titles
-          </h2>
-        )}
-        <nav className="filters" aria-label="Filters">
-          <div className="tabs" role="tablist">
-            {TABS.map((tab) => (
-              <button
-                key={tab.value}
-                className={`tab${type === tab.value ? " is-active" : ""}`}
-                role="tab"
-                aria-selected={type === tab.value}
-                onClick={() => setType(tab.value)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="genres">
-            {genres.map((name) => (
-              <button
-                key={name}
-                className={`chip${genre === name ? " is-active" : ""}`}
-                aria-pressed={genre === name}
-                onClick={() => setGenre(genre === name ? null : name)}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        </nav>
-
         {status && <p className="status">{status}</p>}
-
-        <ul className="grid">
-          {visible.map((title) => (
-            <TitleCard key={title.id} title={title} />
-          ))}
-        </ul>
+        {collections.map((c, i) => (
+          <Fragment key={c.slug}>
+            <Row heading={c.name} description={c.description} id={c.slug}>
+              {c.titles.map((title) => (
+                <RowTitle key={title.id} title={title} />
+              ))}
+            </Row>
+            {/* Continue watching sits after the first section. */}
+            {i === 0 && continueRow}
+          </Fragment>
+        ))}
+        {collections.length === 0 && continueRow}
+        <p className="browse-more">
+          Looking for something else? <Link href="/search">Browse all titles</Link>
+        </p>
       </main>
     </>
   );
