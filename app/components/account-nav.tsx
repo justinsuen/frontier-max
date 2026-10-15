@@ -25,7 +25,7 @@ export default async function AccountNav() {
   return (
     <details className="account-menu">
       <summary aria-label={`Account menu for ${profile.name}`} title={profile.name}>
-        <Avatar name={profile.name} color={profile.avatar_color} size="sm" />
+        <Avatar name={profile.name} color={profile.avatar_color} avatar={profile.avatar} size="sm" />
       </summary>
       <div className="account-popup">
         <p className="account-popup-name">{profile.name}</p>

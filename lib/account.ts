@@ -12,7 +12,8 @@ export const AVATAR_COLORS = ["navy", "brass", "green", "rose", "slate"] as cons
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
 export const MAX_PROFILES = 5;
 
-export type Profile = { id: string; name: string; avatar_color: AvatarColor };
+// avatar: a character picture id from lib/avatars.ts, or null for the coloured initial.
+export type Profile = { id: string; name: string; avatar_color: AvatarColor; avatar: string | null };
 
 // Shared by every component in one request, so the session is read once.
 export const getAccount = cache(async () => {
@@ -23,7 +24,7 @@ export const getAccount = cache(async () => {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, name, avatar_color")
+    .select("id, name, avatar_color, avatar")
     .order("created_at")
     .returns<Profile[]>();
   const activeId = (await cookies()).get(PROFILE_COOKIE)?.value;

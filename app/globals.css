@@ -1056,3 +1056,43 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 }
 .browse-more { margin: 8px 0 0; color: var(--muted); }
 .browse-more a { color: var(--brass); font-weight: 600; }
+
+/* ---- Character avatars ---- */
+.avatar.has-image {
+  background-color: var(--surface-2);
+  background-repeat: no-repeat;
+}
+.picture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 12px 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+.picture-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.picture-option input { position: absolute; opacity: 0; pointer-events: none; }
+.avatar-pick { width: 64px; height: 64px; font-size: 1.6rem; font-weight: 500; transition: transform 0.15s; }
+.picture-option:hover .avatar-pick { transform: scale(1.06); }
+.picture-option:has(input:checked) .avatar-pick { outline: 3px solid var(--brass); outline-offset: 2px; }
+.picture-option:has(input:focus-visible) .avatar-pick { outline: 3px solid var(--text); outline-offset: 2px; }
+.picture-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picture-option:has(input:checked) .picture-name { color: var(--text); }
+.profiles-main .auth-card { width: min(560px, 100%); }

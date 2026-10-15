@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AVATAR_COLORS, MAX_PROFILES, PROFILE_COOKIE, getAccount, safeNext, type AvatarColor } from "@/lib/account";
+import { CHARACTER_AVATAR_IDS } from "@/lib/avatars";
 import { RATINGS, getRatingCounts, type Rating, type RatingCounts } from "@/lib/ratings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -62,12 +63,16 @@ export async function signOut() {
 
 // ---- Profiles ----
 
-function readProfileForm(formData: FormData): { name: string; avatar_color: AvatarColor } | string {
+function readProfileForm(
+  formData: FormData
+): { name: string; avatar_color: AvatarColor; avatar: string | null } | string {
   const name = text(formData, "name");
   const color = text(formData, "avatar_color");
+  const avatar = text(formData, "avatar");
   if (!name || name.length > 40) return "Enter a name of up to 40 characters.";
   if (!(AVATAR_COLORS as readonly string[]).includes(color)) return "Pick a color.";
-  return { name, avatar_color: color as AvatarColor };
+  if (avatar && !CHARACTER_AVATAR_IDS.includes(avatar)) return "Pick a picture from the list.";
+  return { name, avatar_color: color as AvatarColor, avatar: avatar || null };
 }
 
 export async function createProfile(_prev: FormState, formData: FormData): Promise<FormState> {

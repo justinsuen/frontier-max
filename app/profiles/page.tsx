@@ -57,7 +57,7 @@ export default async function ProfilesPage({
                 <li key={p.id}>
                   {managing ? (
                     <Link href={`/profiles?manage=1&edit=${p.id}`} className="profile-tile is-editing">
-                      <Avatar name={p.name} color={p.avatar_color} size="lg" />
+                      <Avatar name={p.name} color={p.avatar_color} avatar={p.avatar} size="lg" />
                       <span className="profile-name">{p.name}</span>
                       <span className="profile-edit">Edit</span>
                     </Link>
@@ -66,7 +66,7 @@ export default async function ProfilesPage({
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="next" value={next} />
                       <button className="profile-tile">
-                        <Avatar name={p.name} color={p.avatar_color} size="lg" />
+                        <Avatar name={p.name} color={p.avatar_color} avatar={p.avatar} size="lg" />
                         <span className="profile-name">{p.name}</span>
                       </button>
                     </form>
