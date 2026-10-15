@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
 import { parseHttpUrl, videoSource, videoThumbnail } from "@/lib/video";
 import { RATINGS, RATING_LABELS, type Rating, type RatingCounts, type RatingSummaryRow } from "@/lib/ratings";
 import { saveProgress, setInWatchlist, setRating } from "../../actions";
@@ -26,8 +26,10 @@ export type TitleDetail = {
   description: string | null;
   release_year: number | null;
   poster_url: string | null;
-  // Wide image without title text, used behind the play button before playback.
+  // Wide image without title text, used as the page's background.
   backdrop_url: string | null;
+  // Transparent title logo shown over the background; the name in text is the fallback.
+  logo_url: string | null;
   video_url: string | null;
   genres: string[];
   episodes: Episode[];
@@ -77,9 +79,8 @@ export default function Watch({
   const [season, setSeason] = useState(
     current?.season_number ?? episodes.find((e) => videoSource(e.video_url))?.season_number ?? seasons[0] ?? 1
   );
-  const playerRef = useRef<HTMLDivElement>(null);
-  // The page opens on a still with a play button; the video loads when it's pressed
-  // (or when an episode is picked from the list).
+  // The video plays in a full-screen "theater" over the page, opened by Play,
+  // Resume, Restart, Trailer or picking an episode.
   const [started, setStarted] = useState(false);
   const lastSaved = useRef<Record<string, number>>({});
   // Totals for items this profile has rated; the server sends no others.
@@ -135,11 +136,46 @@ export default function Watch({
       ? "Trailer"
       : null;
 
-  function play(key: string) {
-    setSelection({ key, resumeAt: resumePoint(progress[key]) });
+  // `from` overrides the saved position (Restart passes 0).
+  function play(key: string, from?: number) {
+    setSelection({ key, resumeAt: from ?? resumePoint(progress[key]) });
     setStarted(true);
-    playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  // Esc closes the theater, and the page behind it doesn't scroll while it's open.
+  useEffect(() => {
+    if (!started) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setStarted(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [started]);
+
+  const resumeFrom = resumePoint(progress[selection.key]);
+  const episodeTag = current ? episodeShortLabel(current) : null;
+  const primaryLabel =
+    resumeFrom > 0
+      ? `Resume${episodeTag ? ` ${episodeTag}` : ""}`
+      : episodeTag
+        ? `Play ${episodeTag}`
+        : selection.key === "main" && title.type === "series"
+          ? "Play trailer"
+          : "Play";
+  const seasonsCount = seasons.length;
+  const meta = [
+    title.type === "series" ? "Series" : "Movie",
+    title.release_year,
+    title.type === "series" && seasonsCount ? `${seasonsCount} ${seasonsCount === 1 ? "season" : "seasons"}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const signInHref = signedIn ? `/profiles?next=/titles/${title.id}` : `/login?next=/titles/${title.id}`;
 
   function onReport({ position, duration, ended, paused }: PlaybackReport) {
     if (position < 1 && !ended) return;
@@ -165,58 +201,108 @@ export default function Watch({
 
   return (
     <>
-      <div className="topbar-spacer" />
+      <section className="title-hero">
+        {title.backdrop_url && (
+          <img className="title-hero-bg" src={largeImage(title.backdrop_url)} alt="" />
+        )}
+        <div className="title-hero-content">
+          {title.logo_url ? (
+            <>
+              <img className="title-hero-logo" src={title.logo_url} alt="" />
+              <h1 className="sr-only">{title.name}</h1>
+            </>
+          ) : (
+            <h1 className="title-hero-name">{title.name}</h1>
+          )}
+          <p className="title-hero-meta">{meta}</p>
 
-      <div className="player-wrap" ref={playerRef}>
-        <div className="player">
-          {started || !source ? (
+          {source ? (
+            <div className="hero-buttons">
+              <button className="hero-play" onClick={() => play(selection.key)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 4.5v15l13-7.5z" />
+                </svg>
+                {primaryLabel}
+              </button>
+              {resumeFrom > 0 && (
+                <button className="hero-restart" onClick={() => play(selection.key, 0)}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5" />
+                  </svg>
+                  Restart
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="status">No video for this title yet.</p>
+          )}
+
+          <div className="hero-icons">
+            <WatchlistButton titleId={title.id} initial={inWatchlist} canSave={canTrack} signedIn={signedIn} />
+            <RatePopover>
+              <RatingPanel
+                heading={title.type === "series" ? "Rate the series" : "Rate this movie"}
+                mine={mine.main}
+                counts={counts.main}
+                onRate={canTrack ? (r) => rate(null, r) : undefined}
+                signInHref={signInHref}
+              />
+              {current && (
+                <RatingPanel
+                  heading={`Rate ${episodeLabel(current)}`}
+                  mine={mine[keyOf(current.id)]}
+                  counts={counts[keyOf(current.id)]}
+                  onRate={canTrack ? (r) => rate(current.id, r) : undefined}
+                  signInHref={signInHref}
+                />
+              )}
+            </RatePopover>
+            {title.type === "series" && title.video_url && (
+              <button className="icon-action" onClick={() => play("main")}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3.5 9.5h17v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1zM3.5 9.5l2.7-5 14 0-2.7 5M9.5 4.5l-2.7 5M15 4.5l-2.7 5" />
+                </svg>
+                <span>Trailer</span>
+              </button>
+            )}
+          </div>
+
+          {current && (
+            <p className="hero-episode">
+              {episodeTag}
+              {episodeTitle(current) ? `: ${episodeTitle(current)}` : ""}
+            </p>
+          )}
+          {(current?.description ?? title.description) && (
+            <p className="hero-description">{current?.description ?? title.description}</p>
+          )}
+          {title.genres.length > 0 && <p className="hero-genres">{title.genres.join("  ·  ")}</p>}
+        </div>
+      </section>
+
+      {started && source && (
+        <div className="theater" role="dialog" aria-modal="true" aria-label={`${title.name}${nowPlaying ? `: ${nowPlaying}` : ""}`}>
+          <button className="theater-close" onClick={() => setStarted(false)} aria-label="Close player" autoFocus>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+          <div className="theater-frame player">
             <Player
               source={source}
               label={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
               onReport={canTrack ? onReport : undefined}
             />
-          ) : (
-            <PosterFrame
-              image={posterImage(title, current)}
-              label={nowPlaying ? `Play ${title.name}: ${nowPlaying}` : `Play ${title.name}`}
-              resumeAt={selection.resumeAt}
-              onPlay={() => setStarted(true)}
-            />
-          )}
-        </div>
-      </div>
-
-      <main className="title-main">
-        <section className="title-info">
-          <p className="eyebrow">
-            {[title.type === "series" ? "Series" : "Movie", title.release_year, ...title.genres]
-              .filter(Boolean)
-              .join(" · ")}
+          </div>
+          <p className="theater-label">
+            {title.name}
+            {nowPlaying ? ` · ${nowPlaying}` : ""}
           </p>
-          <h1 className="title-name">{title.name}</h1>
-          {nowPlaying && <p className="now-playing">Now playing: {nowPlaying}</p>}
-          {title.description && <p className="title-description">{title.description}</p>}
-          <WatchlistButton titleId={title.id} initial={inWatchlist} canSave={canTrack} signedIn={signedIn} />
+        </div>
+      )}
 
-          <RatingPanel
-            heading={title.type === "series" ? "Rate the series" : "Rate this movie"}
-            mine={mine.main}
-            counts={counts.main}
-            onRate={canTrack ? (r) => rate(null, r) : undefined}
-            signInHref={signedIn ? `/profiles?next=/titles/${title.id}` : `/login?next=/titles/${title.id}`}
-          />
-          {current && (
-            <RatingPanel
-              heading={`Rate ${episodeLabel(current)}`}
-              mine={mine[keyOf(current.id)]}
-              counts={counts[keyOf(current.id)]}
-              onRate={canTrack ? (r) => rate(current.id, r) : undefined}
-              signInHref={signedIn ? `/profiles?next=/titles/${title.id}` : `/login?next=/titles/${title.id}`}
-            />
-          )}
-        </section>
-
-        {title.type === "series" && (
+      {title.type === "series" && (
+        <main className="title-main">
           <section className="episodes" aria-label="Episodes">
             <div className="episodes-head">
               <h2>Episodes</h2>
@@ -265,8 +351,8 @@ export default function Watch({
             </ol>
             {episodes.length === 0 && <p className="status">No episodes yet. Add them in Supabase.</p>}
           </section>
-        )}
-      </main>
+        </main>
+      )}
     </>
   );
 }
@@ -408,21 +494,24 @@ function WatchlistButton({
   const [saved, setSaved] = useState(initial);
   const [optimistic, setOptimistic] = useOptimistic(saved);
   const [, startTransition] = useTransition();
+  const icon = (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      {optimistic ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M12 5v14M5 12h14" />}
+    </svg>
+  );
 
   if (!canSave) {
     return (
-      <Link
-        href={signedIn ? `/profiles?next=/titles/${titleId}` : `/login?next=/titles/${titleId}`}
-        className="button-outline watchlist-button"
-      >
-        + My List
+      <Link href={signedIn ? `/profiles?next=/titles/${titleId}` : `/login?next=/titles/${titleId}`} className="icon-action">
+        {icon}
+        <span>My List</span>
       </Link>
     );
   }
 
   return (
     <button
-      className={`button-outline watchlist-button${optimistic ? " is-saved" : ""}`}
+      className={`icon-action${optimistic ? " is-on" : ""}`}
       aria-pressed={optimistic}
       onClick={() =>
         startTransition(async () => {
@@ -433,8 +522,38 @@ function WatchlistButton({
         })
       }
     >
-      {optimistic ? "✓ In My List" : "+ My List"}
+      {icon}
+      <span>{optimistic ? "In My List" : "My List"}</span>
     </button>
+  );
+}
+
+// "Rate" opens a small panel with the rating buttons; clicking elsewhere closes it.
+function RatePopover({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+  return (
+    <div className="rate-popover-wrap" ref={box}>
+      <button className={`icon-action${open ? " is-on" : ""}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+        </svg>
+        <span>Rate</span>
+      </button>
+      {open && <div className="rate-popover">{children}</div>}
+    </div>
   );
 }
 
@@ -522,41 +641,18 @@ function RatingPanel({
   );
 }
 
-// The still shown before playback: an episode's own still if it has one, otherwise
-// the title's backdrop (both come without title text), at a large size.
-function posterImage(title: TitleDetail, episode: Episode | undefined) {
-  const url = parseHttpUrl(episode?.thumbnail_url ?? null) ?? parseHttpUrl(title.backdrop_url);
-  return url ? url.toString().replace(/\/t\/p\/w\d+\//, "/t/p/w1280/") : null;
+// TMDB serves several sizes; the background needs a large one.
+function largeImage(url: string) {
+  return url.replace(/\/t\/p\/w\d+\//, "/t/p/w1280/");
 }
 
-function PosterFrame({
-  image,
-  label,
-  resumeAt,
-  onPlay,
-}: {
-  image: string | null;
-  label: string;
-  resumeAt: number;
-  onPlay: () => void;
-}) {
-  return (
-    <button className="poster-frame" onClick={onPlay} aria-label={label}>
-      {image && <img src={image} alt="" />}
-      <span className="poster-frame-play" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M8 5.5v13l11-6.5z" />
-        </svg>
-      </span>
-      {resumeAt > 0 && <span className="poster-frame-resume">Resume from {formatTime(resumeAt)}</span>}
-    </button>
-  );
+// An episode's own title, without an "Episodes 1 & 2: " prefix.
+function episodeTitle(e: Episode) {
+  return e.name?.replace(/^Episodes? \d+( & \d+)?:\s*/, "") || null;
 }
 
-function formatTime(seconds: number) {
-  const s = Math.floor(seconds);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const ss = String(s % 60).padStart(2, "0");
-  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+// "S1 E2", or "S1 E1–2" style labels already in the name ("Episodes 1 & 2: …").
+function episodeShortLabel(e: Episode) {
+  const pair = e.name?.match(/^Episodes (\d+) & (\d+)/);
+  return pair ? `S${e.season_number} E${pair[1]}–${pair[2]}` : `S${e.season_number} E${e.episode_number}`;
 }
