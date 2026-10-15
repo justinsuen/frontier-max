@@ -14,10 +14,10 @@ export type FeaturedItem = {
 
 const ADVANCE_MS = 7000;
 // After the mouse moves or the page scrolls, wait this long without movement before resuming.
-const IDLE_MS = 2000;
+const IDLE_MS = 1000;
 
 // The large rotating banner at the top of the home page. It advances on its own,
-// but pauses while the person is moving the mouse or scrolling (resuming 2s after they
+// but pauses while the person is moving the mouse or scrolling (resuming 1s after they
 // stop), while keyboard focus is in it, and while the tab is hidden. It never moves for
 // people who ask their system for reduced motion. Resuming continues the countdown
 // where it stopped rather than starting it over.
@@ -40,7 +40,7 @@ export default function Featured({
   const [reducedMotion, setReducedMotion] = useState(false);
   const paused = moving || focused || hidden;
 
-  // Mouse movement or scrolling anywhere pauses; 2s of stillness resumes.
+  // Mouse movement or scrolling anywhere pauses; 1s of stillness resumes.
   useEffect(() => {
     let idle: ReturnType<typeof setTimeout> | undefined;
     const onActivity = () => {
