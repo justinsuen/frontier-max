@@ -1,13 +1,15 @@
-/* Palette drawn from frontiercommons.org with the ratios flipped:
-   their charcoal becomes the canvas, their navy becomes a large surface,
-   their off-white becomes the text, and their brown is brightened into the accent. */
+/* Palette drawn from frontiercommons.org with the ratios flipped: their navy,
+   darkened, becomes the canvas; their off-white becomes the text; and their brown
+   is brightened into the brass accent. */
 :root {
-  --bg: #161614;
-  --surface: #1c1c1a;
-  --surface-2: #262522;
-  --line: #33322f;
+  --bg: #0a0e26;
+  --surface: #121739;
+  --surface-2: #1b2150;
+  --line: #262d5e;
   --text: #f9f8f6;
-  --muted: #a8a49b;
+  --muted: #a4aac8;
+  /* Near-black navy for shading over images (used as rgb(var(--shade) / alpha)). */
+  --shade: 5 8 26;
   --navy: #0d145f;
   --navy-deep: #080d3d;
   --brass: #d39a5f;
@@ -19,12 +21,27 @@
 * { box-sizing: border-box; }
 
 body {
+  position: relative;
+  isolation: isolate;
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The brand dot grid: faint, behind everything, and fading out down the page. */
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: min(1800px, 200vh);
+  background: radial-gradient(rgb(249 248 246 / 0.075) 1px, transparent 1.5px) 0 0 / 26px 26px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 25%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 25%, transparent 100%);
+  pointer-events: none;
 }
 
 .site-header {
@@ -672,7 +689,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   display: flex;
   align-items: flex-end;
   padding: 10% 7% 7%;
-  background: linear-gradient(to top, rgb(10 10 9 / 0.85) 0%, rgb(10 10 9 / 0.35) 45%, transparent 70%);
+  background: linear-gradient(to top, rgb(var(--shade) / 0.85) 0%, rgb(var(--shade) / 0.35) 45%, transparent 70%);
 }
 .tile-logo {
   max-width: 62%;
@@ -764,7 +781,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   inset: 0;
   background:
     linear-gradient(to top, var(--bg) 0%, transparent 32%),
-    linear-gradient(to right, rgb(10 10 9 / 0.88) 0%, rgb(10 10 9 / 0.55) 38%, transparent 68%);
+    linear-gradient(to right, rgb(var(--shade) / 0.88) 0%, rgb(var(--shade) / 0.55) 38%, transparent 68%);
 }
 .featured-content {
   position: absolute;
@@ -828,7 +845,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .featured-save {
   width: 52px;
   border: 1px solid rgb(249 248 246 / 0.35);
-  background: rgb(38 37 34 / 0.75);
+  background: rgb(27 33 80 / 0.7);
   color: var(--text);
 }
 .featured-save:hover { border-color: var(--text); }
@@ -873,7 +890,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 @media (max-width: 560px) {
   .featured { height: 78vh; min-height: 480px; }
   .featured-slide::after {
-    background: linear-gradient(to top, var(--bg) 8%, rgb(10 10 9 / 0.6) 50%, rgb(10 10 9 / 0.25) 100%);
+    background: linear-gradient(to top, var(--bg) 8%, rgb(var(--shade) / 0.6) 50%, rgb(var(--shade) / 0.25) 100%);
   }
   .featured-description { -webkit-line-clamp: 2; }
   .featured-play { flex: 1; }
@@ -904,11 +921,11 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   height: var(--topbar-h);
   padding: 0 clamp(16px, 4vw, 48px);
   /* See-through at the top of the page; solid once scrolled (.is-solid). */
-  background: linear-gradient(rgb(10 10 9 / 0.8), rgb(10 10 9 / 0));
+  background: linear-gradient(rgb(var(--shade) / 0.8), rgb(var(--shade) / 0));
   transition: background-color 0.25s, box-shadow 0.25s;
 }
 .topbar.is-solid {
-  background: rgb(18 18 16 / 0.94);
+  background: rgb(10 14 38 / 0.92);
   box-shadow: 0 1px 0 var(--line), 0 8px 24px rgb(0 0 0 / 0.35);
   backdrop-filter: blur(12px);
 }
