@@ -1410,3 +1410,14 @@ html.splash-quick .splash-spinner {
   .hero-play, .hero-restart { max-width: none; }
   .rate-popover { left: 0; transform: none; }
 }
+
+/* In fullscreen the theater drops its margins and the video fills the screen. */
+html:fullscreen .theater { padding: 0; background: #000; }
+html:fullscreen .theater-frame {
+  width: min(100vw, 100vh * 16 / 9);
+  max-width: none;
+  border-radius: 0;
+}
+html:fullscreen .theater-label { display: none; }
+html:fullscreen .theater-close { z-index: 1; opacity: 0.6; }
+html:fullscreen .theater-close:hover, html:fullscreen .theater-close:focus-visible { opacity: 1; }

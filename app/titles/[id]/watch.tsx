@@ -136,25 +136,53 @@ export default function Watch({
       ? "Trailer"
       : null;
 
-  // `from` overrides the saved position (Restart passes 0).
+  // True while the theater is fullscreen because we asked for it.
+  const wentFullscreen = useRef(false);
+
+  // `from` overrides the saved position (Restart passes 0). Movies and episodes go
+  // fullscreen in the same click (browsers only allow that during a click); a series'
+  // trailer opens in the theater without fullscreen.
   function play(key: string, from?: number) {
     setSelection({ key, resumeAt: from ?? resumePoint(progress[key]) });
     setStarted(true);
+    const trailer = key === "main" && title.type === "series";
+    if (!trailer) enterFullscreen().then((ok) => (wentFullscreen.current = ok));
   }
 
-  // Esc closes the theater, and the page behind it doesn't scroll while it's open.
+  function closePlayer() {
+    setStarted(false);
+    if (wentFullscreen.current) {
+      wentFullscreen.current = false;
+      exitFullscreen();
+    }
+  }
+
+  // Esc closes the theater, leaving fullscreen closes it too, and the page behind it
+  // doesn't scroll while it's open.
   useEffect(() => {
     if (!started) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setStarted(false);
+      if (e.key === "Escape") closePlayer();
+    };
+    const onFullscreenChange = () => {
+      if (!fullscreenElement() && wentFullscreen.current) {
+        wentFullscreen.current = false;
+        setStarted(false);
+      }
     };
     window.addEventListener("keydown", onKey);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
       document.body.style.overflow = overflow;
     };
+    // closePlayer only touches state setters and a ref, so it needn't be a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
   const resumeFrom = resumePoint(progress[selection.key]);
@@ -282,7 +310,7 @@ export default function Watch({
 
       {started && source && (
         <div className="theater" role="dialog" aria-modal="true" aria-label={`${title.name}${nowPlaying ? `: ${nowPlaying}` : ""}`}>
-          <button className="theater-close" onClick={() => setStarted(false)} aria-label="Close player" autoFocus>
+          <button className="theater-close" onClick={closePlayer} aria-label="Close player" autoFocus>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
@@ -647,4 +675,33 @@ function episodeTitle(e: Episode) {
 function episodeShortLabel(e: Episode) {
   const pair = e.name?.match(/^Episodes (\d+) & (\d+)/);
   return pair ? `S${e.season_number} E${pair[1]}–${pair[2]}` : `S${e.season_number} E${e.episode_number}`;
+}
+
+// Fullscreen helpers, including Safari's prefixed versions. Fullscreen covers the
+// whole page, so the theater (already covering the window) fills the screen.
+type FullscreenDoc = Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => void };
+type FullscreenEl = HTMLElement & { webkitRequestFullscreen?: () => void };
+
+function fullscreenElement() {
+  const d = document as FullscreenDoc;
+  return d.fullscreenElement ?? d.webkitFullscreenElement ?? null;
+}
+
+async function enterFullscreen(): Promise<boolean> {
+  const el = document.documentElement as FullscreenEl;
+  try {
+    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" });
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else return false; // e.g. iPhone Safari: the theater still fills the window
+    return Boolean(fullscreenElement());
+  } catch {
+    return false;
+  }
+}
+
+function exitFullscreen() {
+  const d = document as FullscreenDoc;
+  if (!fullscreenElement()) return;
+  if (d.exitFullscreen) d.exitFullscreen().catch(() => {});
+  else d.webkitExitFullscreen?.();
 }
