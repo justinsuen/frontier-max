@@ -1,11 +1,13 @@
-// The logo intro shown once per visit (browser session). It's plain HTML and CSS so
-// it's on screen from the very first paint; SPLASH_CHECK in <head> hides it before
-// paint when it has already played this session, when the device asks for reduced
-// motion, or when session storage isn't available.
+// The logo intro. It's plain HTML and CSS so it's on screen from the very first
+// paint. SPLASH_CHECK in <head> decides, before paint, which version plays:
+// - the full intro on the first page of a visit (browser session);
+// - a quick ~1s version (html.splash-quick) when a page is reloaded later on;
+// - none (html.splash-seen) for other page loads, for reduced motion, or when
+//   session storage isn't available.
 
 const STORAGE_KEY = "fm-splash";
 
-export const SPLASH_CHECK = `try{var d=document.documentElement;if(matchMedia("(prefers-reduced-motion: reduce)").matches||sessionStorage.getItem("${STORAGE_KEY}")){d.classList.add("splash-seen")}else{sessionStorage.setItem("${STORAGE_KEY}","1")}}catch(e){document.documentElement.classList.add("splash-seen")}`;
+export const SPLASH_CHECK = `try{var d=document.documentElement,n=performance.getEntriesByType("navigation")[0];if(matchMedia("(prefers-reduced-motion: reduce)").matches){d.classList.add("splash-seen")}else if(!sessionStorage.getItem("${STORAGE_KEY}")){sessionStorage.setItem("${STORAGE_KEY}","1")}else if(n&&n.type==="reload"){d.classList.add("splash-quick")}else{d.classList.add("splash-seen")}}catch(e){document.documentElement.classList.add("splash-seen")}`;
 
 // Click or any key skips it; it also removes itself once it has faded out.
 const SPLASH_SKIP = `(function(){var s=document.getElementById("splash");if(!s)return;function done(){s.classList.add("is-done");removeEventListener("keydown",done)}s.addEventListener("click",done);addEventListener("keydown",done);s.addEventListener("animationend",function(e){if(e.target===s)done()})})()`;
