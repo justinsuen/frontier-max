@@ -106,6 +106,7 @@ export default function Browse({
                   <span className="progress-bar" aria-hidden="true">
                     <span style={{ width: `${Math.max(item.percent, 3)}%` }} />
                   </span>
+                  <span className="row-title">{item.title.name}</span>
                   {item.label && <span className="row-label">{item.label}</span>}
                 </Link>
               </li>
@@ -183,6 +184,7 @@ function TitleCard({ title }: { title: Title }) {
       <Link href={`/titles/${title.id}`} className="card-link">
         <Artwork title={title} />
         <div className="card-body">
+          <h2 className="card-title">{title.name}</h2>
           <p className="card-meta">
             <span className={`badge badge-${title.type}`}>{title.type === "series" ? "Series" : "Movie"}</span>
             {title.release_year}
@@ -266,33 +268,32 @@ function RowTitle({ title }: { title: Title }) {
     <li className="row-item">
       <Link href={`/titles/${title.id}`} className="card-link">
         <Artwork title={title} />
+        <span className="row-title">{title.name}</span>
       </Link>
     </li>
   );
 }
 
-// Landscape artwork for cards: the backdrop with the title logo (or the name in
-// text) over a dark fade. Without a backdrop, the poster is shown whole on a navy
-// tile, since posters already carry the title.
+// Landscape artwork for cards: the backdrop with the title logo over a dark fade.
+// Without a backdrop, the poster is shown whole on a navy tile. The title is also
+// written under every card, since some logos are hard to read at this size.
 // Images come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
 function Artwork({ title }: { title: Title }) {
   if (!isHttpUrl(title.backdrop_url) && isHttpUrl(title.poster_url)) {
     return (
       <span className="tile tile-poster">
-        <img src={title.poster_url} alt={title.name} loading="lazy" />
+        <img src={title.poster_url} alt="" loading="lazy" />
       </span>
     );
   }
   return (
     <span className="tile">
       {isHttpUrl(title.backdrop_url) && <img className="tile-image" src={title.backdrop_url} alt="" loading="lazy" />}
-      <span className="tile-overlay">
-        {isHttpUrl(title.logo_url) ? (
-          <img className="tile-logo" src={title.logo_url} alt={title.name} loading="lazy" />
-        ) : (
-          <span className="tile-name">{title.name}</span>
-        )}
-      </span>
+      {isHttpUrl(title.logo_url) && (
+        <span className="tile-overlay">
+          <img className="tile-logo" src={title.logo_url} alt="" loading="lazy" />
+        </span>
+      )}
     </span>
   );
 }

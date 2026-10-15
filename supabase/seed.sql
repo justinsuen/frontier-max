@@ -271,47 +271,45 @@ where not exists (
 );
 
 -- Home page sections. Needs the 20261015050000 collections migration.
--- Re-running updates names and descriptions, and adds any missing titles.
+-- Three broad sections, each wider than one screen. Sections not listed here
+-- are removed; re-running updates names and adds any missing titles.
+delete from public.collections
+where slug not in ('faith-and-courage', 'epic-adventures', 'family-movie-night');
+
 insert into public.collections (slug, name, description, sort_order)
 values
-  ('on-mission', 'On Mission', 'True stories of courage, sacrifice and faith under pressure.', 10),
-  ('stories-from-scripture', 'Stories from Scripture', 'The Bible''s stories, brought to the screen.', 20),
-  ('chronicles-of-narnia', 'The Chronicles of Narnia', 'C.S. Lewis''s classic, in order.', 30),
-  ('lord-of-the-rings', 'The Lord of the Rings', 'The complete trilogy, in order.', 40),
-  ('for-the-family', 'For the Family', 'Easy picks for watching together.', 50),
-  ('veggietales', 'VeggieTales', 'Bob, Larry and friends.', 60),
-  ('christmas', 'Christmas Favorites', 'For the holiday season.', 70)
+  ('faith-and-courage', 'Stories of Faith & Courage', 'True stories and Bible stories of people who stood firm.', 10),
+  ('epic-adventures', 'Epic Adventures', 'Quests, battles and other worlds.', 20),
+  ('family-movie-night', 'Family Movie Night', 'Easy picks for watching together.', 30)
 on conflict (slug) do update
   set name = excluded.name, description = excluded.description, sort_order = excluded.sort_order;
 
 insert into public.collection_titles (collection_id, title_id, position)
 select c.id, t.id, v.position
 from (values
-  ('on-mission', 'Hacksaw Ridge', 1),
-  ('on-mission', 'End of the Spear', 2),
-  ('on-mission', 'Unbroken', 3),
-  ('stories-from-scripture', 'The Chosen', 1),
-  ('stories-from-scripture', 'House of David', 2),
-  ('stories-from-scripture', 'The Promised Land', 3),
-  ('stories-from-scripture', 'Jonah: A VeggieTales Movie', 4),
-  ('chronicles-of-narnia', 'The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 1),
-  ('chronicles-of-narnia', 'The Chronicles of Narnia: Prince Caspian', 2),
-  ('chronicles-of-narnia', 'The Chronicles of Narnia: The Voyage of the Dawn Treader', 3),
-  ('lord-of-the-rings', 'The Lord of the Rings: The Fellowship of the Ring', 1),
-  ('lord-of-the-rings', 'The Lord of the Rings: The Two Towers', 2),
-  ('lord-of-the-rings', 'The Lord of the Rings: The Return of the King', 3),
-  ('for-the-family', 'Klaus', 1),
-  ('for-the-family', 'The Best Christmas Pageant Ever', 2),
-  ('for-the-family', 'The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 3),
-  ('for-the-family', 'The Ultimate Gift', 4),
-  ('for-the-family', 'Jonah: A VeggieTales Movie', 5),
-  ('for-the-family', 'The Pirates Who Don''t Do Anything: A VeggieTales Movie', 6),
-  ('for-the-family', 'VeggieTales: Lord of the Beans', 7),
-  ('veggietales', 'Jonah: A VeggieTales Movie', 1),
-  ('veggietales', 'The Pirates Who Don''t Do Anything: A VeggieTales Movie', 2),
-  ('veggietales', 'VeggieTales: Lord of the Beans', 3),
-  ('christmas', 'Klaus', 1),
-  ('christmas', 'The Best Christmas Pageant Ever', 2)
+  ('faith-and-courage', 'The Chosen', 1),
+  ('faith-and-courage', 'Hacksaw Ridge', 2),
+  ('faith-and-courage', 'House of David', 3),
+  ('faith-and-courage', 'Unbroken', 4),
+  ('faith-and-courage', 'The Promised Land', 5),
+  ('faith-and-courage', 'End of the Spear', 6),
+  ('faith-and-courage', 'The Ultimate Gift', 7),
+  ('epic-adventures', 'The Lord of the Rings: The Fellowship of the Ring', 1),
+  ('epic-adventures', 'The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 2),
+  ('epic-adventures', 'The Lord of the Rings: The Two Towers', 3),
+  ('epic-adventures', 'The Chronicles of Narnia: Prince Caspian', 4),
+  ('epic-adventures', 'The Lord of the Rings: The Return of the King', 5),
+  ('epic-adventures', 'The Chronicles of Narnia: The Voyage of the Dawn Treader', 6),
+  ('epic-adventures', 'House of David', 7),
+  ('family-movie-night', 'Klaus', 1),
+  ('family-movie-night', 'Jonah: A VeggieTales Movie', 2),
+  ('family-movie-night', 'The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 3),
+  ('family-movie-night', 'The Best Christmas Pageant Ever', 4),
+  ('family-movie-night', 'The Pirates Who Don''t Do Anything: A VeggieTales Movie', 5),
+  ('family-movie-night', 'The Chronicles of Narnia: Prince Caspian', 6),
+  ('family-movie-night', 'The Ultimate Gift', 7),
+  ('family-movie-night', 'VeggieTales: Lord of the Beans', 8),
+  ('family-movie-night', 'The Chronicles of Narnia: The Voyage of the Dawn Treader', 9)
 ) as v (slug, title_name, position)
 join public.collections c on c.slug = v.slug
 join public.titles t on t.name = v.title_name
