@@ -42,6 +42,7 @@ export default function Player({
   label,
   onReport,
   onStart,
+  onEnd,
 }: {
   source: VideoSource | null;
   label: string;
@@ -49,18 +50,22 @@ export default function Player({
   onReport?: (report: PlaybackReport) => void;
   // Called once, when the video actually starts playing.
   onStart?: () => void;
+  // Called when the video plays through to the end.
+  onEnd?: () => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const reportRef = useRef(onReport);
   const startRef = useRef(onStart);
+  const endRef = useRef(onEnd);
   useEffect(() => {
     reportRef.current = onReport;
     startRef.current = onStart;
+    endRef.current = onEnd;
   });
 
-  // YouTube needs its API attached both to save progress and to tell us when playback starts.
+  // YouTube needs its API attached to save progress and to tell us when playback starts or ends.
   const trackYouTube =
-    source?.kind === "embed" && source.provider === "youtube" && Boolean(onReport || onStart);
+    source?.kind === "embed" && source.provider === "youtube" && Boolean(onReport || onStart || onEnd);
   const src = source?.src;
 
   useEffect(() => {
@@ -91,7 +96,10 @@ export default function Player({
           },
           onStateChange: (e) => {
             if (e.data === YT_PLAYING) started();
-            else if (e.data === YT_ENDED) send(true);
+            else if (e.data === YT_ENDED) {
+              send(true);
+              endRef.current?.();
+            }
             else if (e.data === YT_PAUSED) send(false, true);
           },
         },
@@ -132,6 +140,7 @@ export default function Player({
       autoplay={source.autoplay}
       reportRef={reportRef}
       startRef={startRef}
+      endRef={endRef}
     />
   );
 }
@@ -142,12 +151,14 @@ function FilePlayer({
   autoplay,
   reportRef,
   startRef,
+  endRef,
 }: {
   src: string;
   startAt: number;
   autoplay: boolean;
   reportRef: React.RefObject<((r: PlaybackReport) => void) | undefined>;
   startRef: React.RefObject<(() => void) | undefined>;
+  endRef: React.RefObject<(() => void) | undefined>;
 }) {
   const lastSent = useRef(0);
   const send = (v: HTMLVideoElement, ended = false, paused = false) => {
@@ -175,7 +186,10 @@ function FilePlayer({
       onPause={(e) => {
         if (!e.currentTarget.ended) send(e.currentTarget, false, true);
       }}
-      onEnded={(e) => send(e.currentTarget, true)}
+      onEnded={(e) => {
+        send(e.currentTarget, true);
+        endRef.current?.();
+      }}
       onPlaying={() => startRef.current?.()}
     />
   );

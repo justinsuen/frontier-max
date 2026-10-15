@@ -1402,6 +1402,36 @@ html.splash-quick .splash-spinner {
 .theater-label { margin: 0; color: var(--muted); font-size: 0.9rem; }
 @keyframes theater-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* Shown over the finished video: the next episode and a button to play it. */
+.theater-frame.player { position: relative; }
+.up-next {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4vw, 48px);
+  background: rgb(var(--shade) / 0.88);
+  animation: theater-in 0.3s ease-out;
+}
+.up-next-card { display: flex; align-items: center; gap: clamp(16px, 3vw, 32px); max-width: 860px; width: 100%; }
+.up-next-thumb { flex: 0 1 46%; min-width: 0; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius); }
+.up-next-text { flex: 1 1 0; min-width: 0; }
+.up-next-kicker {
+  margin: 0 0 6px;
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.up-next-name { margin: 0 0 20px; font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 700; line-height: 1.25; }
+.up-next-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 560px) {
+  .up-next-thumb { display: none; }
+  .up-next-name { margin-bottom: 12px; }
+  .up-next .hero-play, .up-next .hero-restart { height: 44px; font-size: 0.95rem; }
+}
+
 @media (max-width: 760px) {
   .title-hero { min-height: 88vh; }
   .title-hero::before {

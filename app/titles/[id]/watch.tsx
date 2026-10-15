@@ -83,6 +83,8 @@ export default function Watch({
   // The video plays in a full-screen "theater" over the page, opened by Play,
   // Resume, Restart, Trailer or picking an episode.
   const [started, setStarted] = useState(false);
+  // True once the playing video reaches its end, to offer the next episode.
+  const [ended, setEnded] = useState(false);
   const lastSaved = useRef<Record<string, number>>({});
   // Totals for items this profile has rated; the server sends no others.
   const [counts, setCounts] = useState<Record<string, RatingCounts>>(() =>
@@ -131,6 +133,11 @@ export default function Watch({
   }
 
   const source = videoSource(current ? current.video_url : title.video_url, selection.resumeAt, started);
+  // The episode after the current one that can be played here.
+  const playable = episodes.filter((e) => videoSource(e.video_url));
+  const nextEpisode = current ? playable[playable.findIndex((e) => e.id === current.id) + 1] : undefined;
+  const nextThumb = nextEpisode && parseHttpUrl(nextEpisode.thumbnail_url ?? videoThumbnail(nextEpisode.video_url));
+
   const nowPlaying = current
     ? episodeLabel(current)
     : title.type === "series" && title.video_url
@@ -158,16 +165,27 @@ export default function Watch({
   function play(key: string, from?: number) {
     setSelection({ key, resumeAt: from ?? resumePoint(progress[key]) });
     setStarted(true);
+    setEnded(false);
     const trailer = key === "main" && title.type === "series";
-    fullscreenPending.current = !trailer;
+    // Moving on to the next episode while already fullscreen stays fullscreen.
+    fullscreenPending.current = !trailer && !fullscreenElement();
     clearTimeout(fullscreenTimer.current);
-    if (!trailer) fullscreenTimer.current = setTimeout(requestPendingFullscreen, FULLSCREEN_FALLBACK_MS);
+    if (fullscreenPending.current) {
+      fullscreenTimer.current = setTimeout(requestPendingFullscreen, FULLSCREEN_FALLBACK_MS);
+    }
+  }
+
+  function playNext() {
+    if (!nextEpisode) return;
+    setSeason(nextEpisode.season_number);
+    play(keyOf(nextEpisode.id), 0);
   }
 
   function closePlayer() {
     fullscreenPending.current = false;
     clearTimeout(fullscreenTimer.current);
     setStarted(false);
+    setEnded(false);
     if (wentFullscreen.current) {
       wentFullscreen.current = false;
       exitFullscreen();
@@ -338,7 +356,30 @@ export default function Watch({
               label={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
               onReport={canTrack ? onReport : undefined}
               onStart={requestPendingFullscreen}
+              onEnd={() => setEnded(true)}
             />
+            {ended && nextEpisode && (
+              <div className="up-next">
+                <div className="up-next-card">
+                  {nextThumb && <img className="up-next-thumb" src={nextThumb.toString()} alt="" />}
+                  <div className="up-next-text">
+                    <p className="up-next-kicker">Up next</p>
+                    <p className="up-next-name">{episodeLabel(nextEpisode)}</p>
+                    <div className="up-next-buttons">
+                      <button className="hero-play" onClick={playNext} autoFocus>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M7 4.5v15l13-7.5z" />
+                        </svg>
+                        Next episode
+                      </button>
+                      <button className="hero-restart" onClick={closePlayer}>
+                        Back to episodes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <p className="theater-label">
             {title.name}
