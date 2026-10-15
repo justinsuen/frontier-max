@@ -155,7 +155,7 @@ export async function saveProgress(input: {
     return;
   }
 
-  await supabase.from("watch_progress").upsert(
+  const { error } = await supabase.from("watch_progress").upsert(
     {
       profile_id: profile.id,
       title_id: titleId,
@@ -167,6 +167,7 @@ export async function saveProgress(input: {
     },
     { onConflict: "profile_id,title_id,episode_id" }
   );
+  if (error) console.error("saveProgress failed:", error.message);
 }
 
 // Sets this profile's rating for a title (episodeId null) or an episode; null clears it.

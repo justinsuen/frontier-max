@@ -50,6 +50,7 @@ type Selection = { key: string; resumeAt: number };
 
 const keyOf = (episodeId: number | null) => (episodeId === null ? "main" : `e${episodeId}`);
 const SAVE_EVERY_MS = 15000;
+const FULLSCREEN_FALLBACK_MS = 2500;
 
 export default function Watch({
   title,
@@ -138,18 +139,34 @@ export default function Watch({
 
   // True while the theater is fullscreen because we asked for it.
   const wentFullscreen = useRef(false);
+  // Movies and episodes go fullscreen once the video starts. Asking in the click itself
+  // would use up the click, and Chrome then blocks the video from starting with sound.
+  // A browser still allows fullscreen for a few seconds after a click, so it's requested
+  // when playback begins, or after FULLSCREEN_FALLBACK_MS if the video is slow to start.
+  const fullscreenPending = useRef(false);
+  const fullscreenTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // `from` overrides the saved position (Restart passes 0). Movies and episodes go
-  // fullscreen in the same click (browsers only allow that during a click); a series'
-  // trailer opens in the theater without fullscreen.
+  function requestPendingFullscreen() {
+    clearTimeout(fullscreenTimer.current);
+    if (!fullscreenPending.current) return;
+    fullscreenPending.current = false;
+    enterFullscreen().then((ok) => (wentFullscreen.current = ok));
+  }
+
+  // `from` overrides the saved position (Restart passes 0). A series' trailer opens in
+  // the theater without fullscreen.
   function play(key: string, from?: number) {
     setSelection({ key, resumeAt: from ?? resumePoint(progress[key]) });
     setStarted(true);
     const trailer = key === "main" && title.type === "series";
-    if (!trailer) enterFullscreen().then((ok) => (wentFullscreen.current = ok));
+    fullscreenPending.current = !trailer;
+    clearTimeout(fullscreenTimer.current);
+    if (!trailer) fullscreenTimer.current = setTimeout(requestPendingFullscreen, FULLSCREEN_FALLBACK_MS);
   }
 
   function closePlayer() {
+    fullscreenPending.current = false;
+    clearTimeout(fullscreenTimer.current);
     setStarted(false);
     if (wentFullscreen.current) {
       wentFullscreen.current = false;
@@ -320,6 +337,7 @@ export default function Watch({
               source={source}
               label={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
               onReport={canTrack ? onReport : undefined}
+              onStart={requestPendingFullscreen}
             />
           </div>
           <p className="theater-label">

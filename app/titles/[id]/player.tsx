@@ -8,7 +8,10 @@ export type PlaybackReport = { position: number; duration: number | null; ended:
 // The small part of YouTube's IFrame Player API that we use.
 type YTPlayer = { getCurrentTime(): number; getDuration(): number; getPlayerState(): number };
 type YTNamespace = {
-  Player: new (el: HTMLIFrameElement, opts: { events: { onStateChange(e: { data: number }): void } }) => YTPlayer;
+  Player: new (
+    el: HTMLIFrameElement,
+    opts: { events: { onReady?(e: { target: YTPlayer }): void; onStateChange(e: { data: number }): void } }
+  ) => YTPlayer;
 };
 const YT_PLAYING = 1;
 const YT_ENDED = 0;
@@ -38,19 +41,26 @@ export default function Player({
   source,
   label,
   onReport,
+  onStart,
 }: {
   source: VideoSource | null;
   label: string;
   // Called every few seconds while playing, and on pause and end. Omit to skip tracking.
   onReport?: (report: PlaybackReport) => void;
+  // Called once, when the video actually starts playing.
+  onStart?: () => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const reportRef = useRef(onReport);
+  const startRef = useRef(onStart);
   useEffect(() => {
     reportRef.current = onReport;
+    startRef.current = onStart;
   });
 
-  const trackYouTube = source?.kind === "embed" && source.provider === "youtube" && Boolean(onReport);
+  // YouTube needs its API attached both to save progress and to tell us when playback starts.
+  const trackYouTube =
+    source?.kind === "embed" && source.provider === "youtube" && Boolean(onReport || onStart);
   const src = source?.src;
 
   useEffect(() => {
@@ -58,6 +68,12 @@ export default function Player({
     const iframe = iframeRef.current;
     let player: YTPlayer | null = null;
     let cancelled = false;
+    let startedPlaying = false;
+    const started = () => {
+      if (startedPlaying) return;
+      startedPlaying = true;
+      startRef.current?.();
+    };
 
     const send = (ended = false, paused = false) => {
       if (!player) return;
@@ -69,8 +85,13 @@ export default function Player({
       if (cancelled) return;
       player = new YT.Player(iframe, {
         events: {
+          // Autoplay may already be under way by the time the API attaches.
+          onReady: (e) => {
+            if (e.target.getPlayerState() === YT_PLAYING) started();
+          },
           onStateChange: (e) => {
-            if (e.data === YT_ENDED) send(true);
+            if (e.data === YT_PLAYING) started();
+            else if (e.data === YT_ENDED) send(true);
             else if (e.data === YT_PAUSED) send(false, true);
           },
         },
@@ -110,6 +131,7 @@ export default function Player({
       startAt={source.startAt}
       autoplay={source.autoplay}
       reportRef={reportRef}
+      startRef={startRef}
     />
   );
 }
@@ -119,11 +141,13 @@ function FilePlayer({
   startAt,
   autoplay,
   reportRef,
+  startRef,
 }: {
   src: string;
   startAt: number;
   autoplay: boolean;
   reportRef: React.RefObject<((r: PlaybackReport) => void) | undefined>;
+  startRef: React.RefObject<(() => void) | undefined>;
 }) {
   const lastSent = useRef(0);
   const send = (v: HTMLVideoElement, ended = false, paused = false) => {
@@ -152,6 +176,7 @@ function FilePlayer({
         if (!e.currentTarget.ended) send(e.currentTarget, false, true);
       }}
       onEnded={(e) => send(e.currentTarget, true)}
+      onPlaying={() => startRef.current?.()}
     />
   );
 }
