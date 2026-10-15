@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
 import { parseHttpUrl, videoSource, videoThumbnail } from "@/lib/video";
-import { saveProgress, setInWatchlist } from "../../actions";
+import { NO_RATINGS, RATINGS, RATING_LABELS, type Rating, type RatingCounts } from "@/lib/ratings";
+import { saveProgress, setInWatchlist, setRating } from "../../actions";
 import Player, { type PlaybackReport } from "./player";
 
 export type Episode = {
@@ -39,6 +40,9 @@ export type Progress = {
   updated_at: string;
 };
 
+// Totals from rating_summary(): one row per episode, plus episode_id null for the title itself.
+export type RatingSummaryRow = { episode_id: number | null } & RatingCounts;
+
 // What the player is showing ("main" is the title's own video: a movie, or a series trailer),
 // and where it started. resumeAt is fixed when chosen so saving progress never reloads the player.
 type Selection = { key: string; resumeAt: number };
@@ -52,6 +56,8 @@ export default function Watch({
   canTrack,
   signedIn,
   inWatchlist,
+  ratingSummary,
+  myRatings,
   accountNav,
 }: {
   title: TitleDetail;
@@ -60,6 +66,8 @@ export default function Watch({
   canTrack: boolean;
   signedIn: boolean;
   inWatchlist: boolean;
+  ratingSummary: RatingSummaryRow[];
+  myRatings: { episode_id: number | null; rating: Rating }[];
   accountNav: ReactNode;
 }) {
   const { episodes } = title;
@@ -74,6 +82,37 @@ export default function Watch({
   );
   const playerRef = useRef<HTMLDivElement>(null);
   const lastSaved = useRef<Record<string, number>>({});
+  const [counts, setCounts] = useState<Record<string, RatingCounts>>(() =>
+    Object.fromEntries(
+      ratingSummary.map(({ episode_id, not_for_me, liked, loved }) => [
+        keyOf(episode_id),
+        { not_for_me: Number(not_for_me), liked: Number(liked), loved: Number(loved) },
+      ])
+    )
+  );
+  const [mine, setMine] = useState<Record<string, Rating>>(() =>
+    Object.fromEntries(myRatings.map((r) => [keyOf(r.episode_id), r.rating]))
+  );
+
+  // Clicking the rating you already gave clears it. Totals update right away.
+  function rate(episodeId: number | null, choice: Rating) {
+    const key = keyOf(episodeId);
+    const previous = mine[key];
+    const next = previous === choice ? null : choice;
+    setMine((m) => {
+      const copy = { ...m };
+      if (next) copy[key] = next;
+      else delete copy[key];
+      return copy;
+    });
+    setCounts((c) => {
+      const updated = { ...(c[key] ?? NO_RATINGS) };
+      if (previous) updated[previous] = Math.max(0, updated[previous] - 1);
+      if (next) updated[next] += 1;
+      return { ...c, [key]: updated };
+    });
+    setRating(title.id, episodeId, next).catch(() => {});
+  }
 
   const source = videoSource(current ? current.video_url : title.video_url, selection.resumeAt);
   const nowPlaying = current
@@ -144,6 +183,23 @@ export default function Watch({
           {nowPlaying && <p className="now-playing">Now playing: {nowPlaying}</p>}
           {title.description && <p className="title-description">{title.description}</p>}
           <WatchlistButton titleId={title.id} initial={inWatchlist} canSave={canTrack} signedIn={signedIn} />
+
+          <RatingPanel
+            heading={title.type === "series" ? "Rate the series" : "Rate this movie"}
+            mine={mine.main}
+            counts={counts.main}
+            onRate={canTrack ? (r) => rate(null, r) : undefined}
+            signInHref={signedIn ? `/profiles?next=/titles/${title.id}` : `/login?next=/titles/${title.id}`}
+          />
+          {current && (
+            <RatingPanel
+              heading={`Rate ${episodeLabel(current)}`}
+              mine={mine[keyOf(current.id)]}
+              counts={counts[keyOf(current.id)]}
+              onRate={canTrack ? (r) => rate(current.id, r) : undefined}
+              signInHref={signedIn ? `/profiles?next=/titles/${title.id}` : `/login?next=/titles/${title.id}`}
+            />
+          )}
         </section>
 
         {title.type === "series" && (
@@ -188,6 +244,7 @@ export default function Watch({
                     thumbnail={e.thumbnail_url ?? videoThumbnail(e.video_url)}
                     active={selection.key === keyOf(e.id)}
                     progress={progress[keyOf(e.id)]}
+                    ratings={counts[keyOf(e.id)]}
                     onPlay={videoSource(e.video_url) ? () => play(keyOf(e.id)) : undefined}
                     watchUrl={e.watch_url}
                   />
@@ -210,6 +267,7 @@ function EpisodeRow({
   progress,
   onPlay,
   watchUrl,
+  ratings,
 }: {
   number?: number;
   label: string;
@@ -220,6 +278,7 @@ function EpisodeRow({
   // Missing when the episode can't be played here.
   onPlay?: () => void;
   watchUrl?: string | null;
+  ratings?: RatingCounts;
 }) {
   const thumb = parseHttpUrl(thumbnail);
   const external = parseHttpUrl(watchUrl ?? null);
@@ -236,6 +295,7 @@ function EpisodeRow({
           {label}
         </span>
         {description && <span className="episode-description">{description}</span>}
+        {ratings && <RatingTally counts={ratings} />}
         {active ? (
           <span className="episode-state">Playing</span>
         ) : (
@@ -365,5 +425,100 @@ function WatchlistButton({
     >
       {optimistic ? "✓ In My List" : "+ My List"}
     </button>
+  );
+}
+
+const RATING_ICONS: Record<Rating, ReactNode> = {
+  not_for_me: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.7a2 2 0 0 0-2 1.7l-1.4 9a2 2 0 0 0 2 2.3H10zM17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+    </svg>
+  ),
+  liked: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+    </svg>
+  ),
+  loved: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z" />
+    </svg>
+  ),
+};
+
+// Shown best-first in totals.
+const TALLY_ORDER: Rating[] = ["loved", "liked", "not_for_me"];
+const TALLY_WORDS: Record<Rating, string> = { loved: "loved it", liked: "liked it", not_for_me: "not for them" };
+
+function RatingPanel({
+  heading,
+  mine,
+  counts = NO_RATINGS,
+  onRate,
+  signInHref,
+}: {
+  heading: string;
+  mine?: Rating;
+  counts?: RatingCounts;
+  // Missing when no profile is active; the buttons then lead to sign-in.
+  onRate?: (rating: Rating) => void;
+  signInHref: string;
+}) {
+  const total = counts.not_for_me + counts.liked + counts.loved;
+  return (
+    <section className="rating-panel" aria-label={heading}>
+      <h2 className="rating-heading">{heading}</h2>
+      <div className="rating-buttons">
+        {RATINGS.map((r) =>
+          onRate ? (
+            <button
+              key={r}
+              className={`rating-button${mine === r ? " is-selected" : ""}`}
+              aria-pressed={mine === r}
+              onClick={() => onRate(r)}
+            >
+              {RATING_ICONS[r]}
+              {RATING_LABELS[r]}
+            </button>
+          ) : (
+            <Link key={r} href={signInHref} className="rating-button">
+              {RATING_ICONS[r]}
+              {RATING_LABELS[r]}
+            </Link>
+          )
+        )}
+      </div>
+      {total > 0 ? (
+        <div className="rating-summary">
+          <span className="rating-bar" aria-hidden="true">
+            {TALLY_ORDER.map((r) =>
+              counts[r] > 0 ? <span key={r} data-rating={r} style={{ flexGrow: counts[r] }} /> : null
+            )}
+          </span>
+          <p className="rating-totals">
+            {TALLY_ORDER.filter((r) => counts[r] > 0)
+              .map((r) => `${counts[r]} ${TALLY_WORDS[r]}`)
+              .join(" · ")}
+          </p>
+        </div>
+      ) : (
+        <p className="rating-totals">No ratings yet.</p>
+      )}
+    </section>
+  );
+}
+
+function RatingTally({ counts }: { counts: RatingCounts }) {
+  const shown = TALLY_ORDER.filter((r) => counts[r] > 0);
+  if (shown.length === 0) return null;
+  return (
+    <span className="rating-tally" aria-label={shown.map((r) => `${counts[r]} ${TALLY_WORDS[r]}`).join(", ")}>
+      {shown.map((r) => (
+        <span key={r} data-rating={r}>
+          {RATING_ICONS[r]}
+          {counts[r]}
+        </span>
+      ))}
+    </span>
   );
 }

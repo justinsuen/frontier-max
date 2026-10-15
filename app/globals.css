@@ -628,3 +628,58 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   .header-nav .search { flex: 1; min-width: 0; }
   .account-name { display: none; }
 }
+
+/* ---- Ratings ---- */
+[data-rating="loved"] { --rating: var(--brass); }
+[data-rating="liked"] { --rating: var(--green); }
+[data-rating="not_for_me"] { --rating: var(--muted); }
+
+.rating-panel { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.rating-heading {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.rating-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.rating-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.rating-button svg, .rating-tally svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rating-button:hover { border-color: var(--muted); }
+.rating-button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.rating-button.is-selected { border-color: var(--brass); background: var(--brass); color: var(--surface); }
+.rating-button.is-selected svg { fill: currentColor; }
+
+.rating-summary { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; max-width: 360px; }
+.rating-bar { display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden; }
+.rating-bar > span { background: var(--rating); }
+.rating-totals { margin: 10px 0 0; color: var(--muted); font-size: 0.85rem; }
+.rating-summary .rating-totals { margin: 0; }
+
+.rating-tally { display: flex; gap: 12px; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 0.75rem; }
+.rating-tally > span { display: inline-flex; align-items: center; gap: 4px; color: var(--rating); }
+.rating-tally svg { width: 12px; height: 12px; fill: currentColor; stroke: none; }
