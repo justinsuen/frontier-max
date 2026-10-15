@@ -1327,7 +1327,45 @@ html.splash-quick .splash-spinner {
   line-height: 1.55;
 }
 .hero-genres { margin: 0; color: var(--muted); font-size: 0.9rem; }
-.title-hero + .title-main { padding-top: 8px; }
+/* Series episodes under the hero: full width, as a grid of cards. */
+.title-hero + .title-main {
+  display: block;
+  max-width: none;
+  margin: 0;
+  padding: 8px clamp(16px, 4vw, 48px) 80px;
+}
+.title-hero + .title-main .episodes-head { gap: 16px 24px; margin-bottom: 22px; }
+.title-hero + .title-main .episodes-head h2 {
+  color: var(--text);
+  font-family: inherit;
+  font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+.title-hero + .title-main .episodes .tab { padding: 11px 22px; font-size: 1rem; }
+.title-hero + .title-main .episode-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 32px 22px;
+  border-top: 0;
+}
+.title-hero + .title-main .episode {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  height: 100%;
+  padding: 0;
+  border-bottom: 0;
+}
+.title-hero + .title-main button.episode:hover { background: none; }
+.title-hero + .title-main .episode-thumb { width: 100%; }
+.title-hero + .title-main button.episode:hover .episode-thumb { outline: 2px solid var(--brass); outline-offset: 2px; }
+.title-hero + .title-main .episode-name { font-size: 1.05rem; line-height: 1.35; }
+.title-hero + .title-main .episode-number { margin-right: 8px; font-size: 0.9rem; }
+@media (max-width: 560px) {
+  .title-hero + .title-main .episode-list { grid-template-columns: 1fr; gap: 26px; }
+}
 
 /* ---- Theater: the video, full screen over the page ---- */
 .theater {
