@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 export type Title = {
   id: number;
@@ -12,6 +12,8 @@ export type Title = {
   genres: string[];
 };
 
+export type ContinueItem = { title: Title; label: string | null; percent: number };
+
 type TypeFilter = "all" | Title["type"];
 
 const TABS: { value: TypeFilter; label: string }[] = [
@@ -20,7 +22,22 @@ const TABS: { value: TypeFilter; label: string }[] = [
   { value: "series", label: "Series" },
 ];
 
-export default function Browse({ titles, message }: { titles: Title[]; message?: string }) {
+export default function Browse({
+  titles,
+  message,
+  continueWatching = [],
+  myList,
+  profileName,
+  accountNav,
+}: {
+  titles: Title[];
+  message?: string;
+  continueWatching?: ContinueItem[];
+  // Undefined when no profile is active (signed out), so the row isn't offered.
+  myList?: Title[];
+  profileName?: string;
+  accountNav: ReactNode;
+}) {
   const [type, setType] = useState<TypeFilter>("all");
   const [genre, setGenre] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -49,22 +66,63 @@ export default function Browse({ titles, message }: { titles: Title[]; message?:
         <Link href="/" className="logo">
           Frontier <span>Max</span>
         </Link>
-        <input
-          className="search"
-          type="search"
-          placeholder="Search titles"
-          aria-label="Search titles"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="header-nav">
+          <input
+            className="search"
+            type="search"
+            placeholder="Search titles"
+            aria-label="Search titles"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {accountNav}
+        </div>
       </header>
 
       <section className="hero">
-        <p className="eyebrow">{titles.length} {titles.length === 1 ? "title" : "titles"} in the catalog</p>
+        <p className="eyebrow">
+          {profileName
+            ? `Welcome back, ${profileName}`
+            : `${titles.length} ${titles.length === 1 ? "title" : "titles"} in the catalog`}
+        </p>
         <h1 className="page-title">Find something worth watching.</h1>
       </section>
 
       <main>
+        {!q && continueWatching.length > 0 && (
+          <Row heading="Continue watching">
+            {continueWatching.map((item) => (
+              <li key={item.title.id} className="row-item">
+                <Link href={`/titles/${item.title.id}`} className="card-link">
+                  <Poster title={item.title} />
+                  <span className="progress-bar" aria-hidden="true">
+                    <span style={{ width: `${Math.max(item.percent, 3)}%` }} />
+                  </span>
+                  <span className="row-title">{item.title.name}</span>
+                  {item.label && <span className="row-label">{item.label}</span>}
+                </Link>
+              </li>
+            ))}
+          </Row>
+        )}
+
+        {!q && myList && (
+          <Row heading="My List" id="my-list">
+            {myList.length === 0 ? (
+              <li className="row-empty">Use “+ My List” on any title to save it here.</li>
+            ) : (
+              myList.map((title) => (
+                <li key={title.id} className="row-item">
+                  <Link href={`/titles/${title.id}`} className="card-link">
+                    <Poster title={title} />
+                    <span className="row-title">{title.name}</span>
+                  </Link>
+                </li>
+              ))
+            )}
+          </Row>
+        )}
+
         <nav className="filters" aria-label="Filters">
           <div className="tabs" role="tablist">
             {TABS.map((tab) => (
@@ -109,12 +167,7 @@ function TitleCard({ title }: { title: Title }) {
   return (
     <li className="card">
       <Link href={`/titles/${title.id}`} className="card-link">
-        {isHttpUrl(title.poster_url) ? (
-          // Posters come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
-          <img className="poster" src={title.poster_url} alt="" loading="lazy" />
-        ) : (
-          <div className="poster">{title.name.charAt(0).toUpperCase()}</div>
-        )}
+        <Poster title={title} />
         <div className="card-body">
           <h2 className="card-title">{title.name}</h2>
           <p className="card-meta">
@@ -124,6 +177,24 @@ function TitleCard({ title }: { title: Title }) {
         </div>
       </Link>
     </li>
+  );
+}
+
+function Row({ heading, id, children }: { heading: string; id?: string; children: ReactNode }) {
+  return (
+    <section className="row" id={id} aria-label={heading}>
+      <h2 className="row-heading">{heading}</h2>
+      <ul className="row-scroller">{children}</ul>
+    </section>
+  );
+}
+
+function Poster({ title }: { title: Title }) {
+  return isHttpUrl(title.poster_url) ? (
+    // Posters come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
+    <img className="poster" src={title.poster_url} alt="" loading="lazy" />
+  ) : (
+    <div className="poster">{title.name.charAt(0).toUpperCase()}</div>
   );
 }
 

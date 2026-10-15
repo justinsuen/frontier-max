@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
 import { parseHttpUrl, videoSource, videoThumbnail } from "@/lib/video";
+import { saveProgress, setInWatchlist } from "../../actions";
+import Player, { type PlaybackReport } from "./player";
 
 export type Episode = {
   id: number;
@@ -28,31 +30,83 @@ export type TitleDetail = {
   episodes: Episode[];
 };
 
-// What the player is showing: the title's own video (a movie, or a series trailer) or one episode.
-type Selection = { kind: "main" } | { kind: "episode"; id: number };
+// One saved position for this profile: episode_id is null for the title's own video.
+export type Progress = {
+  episode_id: number | null;
+  position_seconds: number;
+  duration_seconds: number | null;
+  completed: boolean;
+  updated_at: string;
+};
 
-export default function Watch({ title }: { title: TitleDetail }) {
+// What the player is showing ("main" is the title's own video: a movie, or a series trailer),
+// and where it started. resumeAt is fixed when chosen so saving progress never reloads the player.
+type Selection = { key: string; resumeAt: number };
+
+const keyOf = (episodeId: number | null) => (episodeId === null ? "main" : `e${episodeId}`);
+const SAVE_EVERY_MS = 15000;
+
+export default function Watch({
+  title,
+  progress: initialProgress,
+  canTrack,
+  signedIn,
+  inWatchlist,
+  accountNav,
+}: {
+  title: TitleDetail;
+  progress: Progress[];
+  // True when a profile is active, so progress and My List can be saved.
+  canTrack: boolean;
+  signedIn: boolean;
+  inWatchlist: boolean;
+  accountNav: ReactNode;
+}) {
   const { episodes } = title;
   const seasons = [...new Set(episodes.map((e) => e.season_number))];
-  const firstPlayable = episodes.find((e) => videoSource(e.video_url));
-
-  const [selection, setSelection] = useState<Selection>(
-    firstPlayable ? { kind: "episode", id: firstPlayable.id } : { kind: "main" }
+  const [progress, setProgress] = useState(() =>
+    Object.fromEntries(initialProgress.map((p) => [keyOf(p.episode_id), p]))
   );
-  const [season, setSeason] = useState(firstPlayable?.season_number ?? seasons[0] ?? 1);
+  const [selection, setSelection] = useState<Selection>(() => initialSelection(title, initialProgress));
+  const current = episodes.find((e) => keyOf(e.id) === selection.key);
+  const [season, setSeason] = useState(
+    current?.season_number ?? episodes.find((e) => videoSource(e.video_url))?.season_number ?? seasons[0] ?? 1
+  );
   const playerRef = useRef<HTMLDivElement>(null);
+  const lastSaved = useRef<Record<string, number>>({});
 
-  const current = selection.kind === "episode" ? episodes.find((e) => e.id === selection.id) : undefined;
-  const source = videoSource(current ? current.video_url : title.video_url);
+  const source = videoSource(current ? current.video_url : title.video_url, selection.resumeAt);
   const nowPlaying = current
     ? episodeLabel(current)
     : title.type === "series" && title.video_url
       ? "Trailer"
       : null;
 
-  function play(next: Selection) {
-    setSelection(next);
+  function play(key: string) {
+    setSelection({ key, resumeAt: resumePoint(progress[key]) });
     playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function onReport({ position, duration, ended, paused }: PlaybackReport) {
+    if (position < 1 && !ended) return;
+    const key = selection.key;
+    const episodeId = current?.id ?? null;
+    const completed = ended || Boolean(duration && position / duration >= 0.95);
+    setProgress((p) => ({
+      ...p,
+      [key]: {
+        episode_id: episodeId,
+        position_seconds: Math.round(position),
+        duration_seconds: duration ? Math.round(duration) : null,
+        completed,
+        updated_at: new Date().toISOString(),
+      },
+    }));
+
+    const now = Date.now();
+    if (!ended && !paused && now - (lastSaved.current[key] ?? 0) < SAVE_EVERY_MS) return;
+    lastSaved.current[key] = now;
+    saveProgress({ titleId: title.id, episodeId, position, duration, completed }).catch(() => {});
   }
 
   return (
@@ -61,27 +115,21 @@ export default function Watch({ title }: { title: TitleDetail }) {
         <Link href="/" className="logo">
           Frontier <span>Max</span>
         </Link>
-        <Link href="/" className="back-link">
-          ← Browse
-        </Link>
+        <nav className="header-nav">
+          <Link href="/" className="back-link">
+            ← Browse
+          </Link>
+          {accountNav}
+        </nav>
       </header>
 
       <div className="player-wrap" ref={playerRef}>
         <div className="player">
-          {source?.kind === "embed" ? (
-            <iframe
-              key={source.src}
-              src={source.src}
-              title={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-            />
-          ) : source?.kind === "file" ? (
-            <video key={source.src} src={source.src} controls playsInline />
-          ) : (
-            <p className="player-empty">No video for this title yet.</p>
-          )}
+          <Player
+            source={source}
+            label={nowPlaying ? `${title.name}: ${nowPlaying}` : title.name}
+            onReport={canTrack ? onReport : undefined}
+          />
         </div>
       </div>
 
@@ -95,6 +143,7 @@ export default function Watch({ title }: { title: TitleDetail }) {
           <h1 className="title-name">{title.name}</h1>
           {nowPlaying && <p className="now-playing">Now playing: {nowPlaying}</p>}
           {title.description && <p className="title-description">{title.description}</p>}
+          <WatchlistButton titleId={title.id} initial={inWatchlist} canSave={canTrack} signedIn={signedIn} />
         </section>
 
         {title.type === "series" && (
@@ -123,8 +172,9 @@ export default function Watch({ title }: { title: TitleDetail }) {
                 <EpisodeRow
                   label="Trailer"
                   thumbnail={videoThumbnail(title.video_url)}
-                  active={selection.kind === "main"}
-                  onPlay={() => play({ kind: "main" })}
+                  active={selection.key === "main"}
+                  progress={progress.main}
+                  onPlay={() => play("main")}
                 />
               )}
               {episodes
@@ -136,8 +186,9 @@ export default function Watch({ title }: { title: TitleDetail }) {
                     label={e.name ?? `Episode ${e.episode_number}`}
                     description={e.description}
                     thumbnail={e.thumbnail_url ?? videoThumbnail(e.video_url)}
-                    active={selection.kind === "episode" && selection.id === e.id}
-                    onPlay={videoSource(e.video_url) ? () => play({ kind: "episode", id: e.id }) : undefined}
+                    active={selection.key === keyOf(e.id)}
+                    progress={progress[keyOf(e.id)]}
+                    onPlay={videoSource(e.video_url) ? () => play(keyOf(e.id)) : undefined}
                     watchUrl={e.watch_url}
                   />
                 ))}
@@ -156,6 +207,7 @@ function EpisodeRow({
   description,
   thumbnail,
   active,
+  progress,
   onPlay,
   watchUrl,
 }: {
@@ -164,6 +216,7 @@ function EpisodeRow({
   description?: string | null;
   thumbnail: string | null;
   active: boolean;
+  progress?: Progress;
   // Missing when the episode can't be played here.
   onPlay?: () => void;
   watchUrl?: string | null;
@@ -175,6 +228,7 @@ function EpisodeRow({
       <span className="episode-thumb">
         {thumb && <img src={thumb.toString()} alt="" loading="lazy" />}
         {onPlay && <span className="episode-play" aria-hidden="true">▶</span>}
+        {progress && <ProgressBar progress={progress} />}
       </span>
       <span className="episode-text">
         <span className="episode-name">
@@ -182,7 +236,11 @@ function EpisodeRow({
           {label}
         </span>
         {description && <span className="episode-description">{description}</span>}
-        {active && <span className="episode-state">Playing</span>}
+        {active ? (
+          <span className="episode-state">Playing</span>
+        ) : (
+          progress?.completed && <span className="episode-state is-muted">Watched</span>
+        )}
         {!onPlay &&
           (external ? (
             <a className="episode-external" href={external.toString()} target="_blank" rel="noopener noreferrer">
@@ -222,4 +280,90 @@ function episodeLabel(e: Episode) {
   // Names like "Episodes 1 & 2: …" already say which episode they are.
   if (e.name?.startsWith("Episode")) return `S${e.season_number} · ${e.name}`;
   return `S${e.season_number} · E${e.episode_number}${e.name ? `: ${e.name}` : ""}`;
+}
+
+// Start where this profile left off: its most recent unfinished video, or the
+// episode after its most recently finished one.
+function initialSelection(title: TitleDetail, progress: Progress[]): Selection {
+  const playable = title.episodes.filter((e) => videoSource(e.video_url));
+  const canPlay = (episodeId: number | null) =>
+    episodeId === null ? Boolean(videoSource(title.video_url)) : playable.some((e) => e.id === episodeId);
+  const latest = [...progress]
+    .filter((p) => canPlay(p.episode_id))
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+
+  if (latest && !latest.completed) return { key: keyOf(latest.episode_id), resumeAt: resumePoint(latest) };
+  if (latest?.completed && latest.episode_id !== null) {
+    const next = playable[playable.findIndex((e) => e.id === latest.episode_id) + 1];
+    if (next) {
+      const saved = progress.find((p) => p.episode_id === next.id);
+      return { key: keyOf(next.id), resumeAt: resumePoint(saved) };
+    }
+  }
+  return playable[0] ? { key: keyOf(playable[0].id), resumeAt: 0 } : { key: "main", resumeAt: 0 };
+}
+
+// Back up a few seconds for context; start over if it was finished or barely started.
+function resumePoint(p: Progress | undefined) {
+  if (!p || p.completed || p.position_seconds < 10) return 0;
+  if (p.duration_seconds && p.position_seconds > p.duration_seconds - 15) return 0;
+  return Math.max(0, p.position_seconds - 3);
+}
+
+function ProgressBar({ progress }: { progress: Progress }) {
+  const pct = progress.completed
+    ? 100
+    : progress.duration_seconds
+      ? Math.min(100, (progress.position_seconds / progress.duration_seconds) * 100)
+      : 0;
+  if (pct <= 0) return null;
+  return (
+    <span className="progress-bar" aria-hidden="true">
+      <span style={{ width: `${pct}%` }} />
+    </span>
+  );
+}
+
+function WatchlistButton({
+  titleId,
+  initial,
+  canSave,
+  signedIn,
+}: {
+  titleId: number;
+  initial: boolean;
+  canSave: boolean;
+  signedIn: boolean;
+}) {
+  const [saved, setSaved] = useState(initial);
+  const [optimistic, setOptimistic] = useOptimistic(saved);
+  const [, startTransition] = useTransition();
+
+  if (!canSave) {
+    return (
+      <Link
+        href={signedIn ? `/profiles?next=/titles/${titleId}` : `/login?next=/titles/${titleId}`}
+        className="button-outline watchlist-button"
+      >
+        + My List
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      className={`button-outline watchlist-button${optimistic ? " is-saved" : ""}`}
+      aria-pressed={optimistic}
+      onClick={() =>
+        startTransition(async () => {
+          const next = !optimistic;
+          setOptimistic(next);
+          await setInWatchlist(titleId, next);
+          setSaved(next);
+        })
+      }
+    >
+      {optimistic ? "✓ In My List" : "+ My List"}
+    </button>
+  );
 }

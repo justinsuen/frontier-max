@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { getSupabase } from "@/lib/supabase";
-import Watch, { type Episode, type TitleDetail } from "./watch";
+import { getAccount, requireProfileIfSignedIn } from "@/lib/account";
+import AccountNav from "../../components/account-nav";
+import Watch, { type Episode, type Progress, type TitleDetail } from "./watch";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,8 @@ const SELECT =
 
 // cache() lets generateMetadata and the page share one query per request.
 const getTitle = cache(async (id: string) => {
-  const supabase = getSupabase();
-  if (!supabase || !/^\d+$/.test(id)) return null;
+  if (!/^\d+$/.test(id)) return null;
+  const { supabase } = await getAccount();
   const { data, error } = await supabase.from("titles").select(SELECT).eq("id", id).maybeSingle<TitleRow>();
   if (error) throw new Error(`Couldn't load title: ${error.message}`);
   if (!data) return null;
@@ -34,7 +35,40 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function TitlePage({ params }: { params: Promise<{ id: string }> }) {
-  const title = await getTitle((await params).id);
+  const { id } = await params;
+  const { supabase, user, profile } = await requireProfileIfSignedIn(`/titles/${id}`);
+  const title = await getTitle(id);
   if (!title) notFound();
-  return <Watch title={title} />;
+
+  let progress: Progress[] = [];
+  let inWatchlist = false;
+  if (profile) {
+    const [progressResult, watchlistResult] = await Promise.all([
+      supabase
+        .from("watch_progress")
+        .select("episode_id, position_seconds, duration_seconds, completed, updated_at")
+        .eq("profile_id", profile.id)
+        .eq("title_id", title.id)
+        .returns<Progress[]>(),
+      supabase
+        .from("watchlist")
+        .select("title_id", { count: "exact", head: true })
+        .eq("profile_id", profile.id)
+        .eq("title_id", title.id),
+    ]);
+    progress = progressResult.data ?? [];
+    inWatchlist = (watchlistResult.count ?? 0) > 0;
+  }
+
+  return (
+    <Watch
+      key={profile?.id ?? "guest"}
+      title={title}
+      progress={progress}
+      canTrack={Boolean(profile)}
+      signedIn={Boolean(user)}
+      inWatchlist={inWatchlist}
+      accountNav={<AccountNav />}
+    />
+  );
 }
