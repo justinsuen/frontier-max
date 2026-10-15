@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { videoSource } from "@/lib/video";
+import { parseHttpUrl, videoSource, videoThumbnail } from "@/lib/video";
 
 export type Episode = {
   id: number;
   season_number: number;
   episode_number: number;
   name: string | null;
-  video_url: string;
+  description: string | null;
+  // Episodes without a video are listed but can't be played here.
+  video_url: string | null;
+  thumbnail_url: string | null;
+  watch_url: string | null;
 };
 
 export type TitleDetail = {
@@ -30,11 +34,12 @@ type Selection = { kind: "main" } | { kind: "episode"; id: number };
 export default function Watch({ title }: { title: TitleDetail }) {
   const { episodes } = title;
   const seasons = [...new Set(episodes.map((e) => e.season_number))];
+  const firstPlayable = episodes.find((e) => videoSource(e.video_url));
 
   const [selection, setSelection] = useState<Selection>(
-    episodes.length > 0 ? { kind: "episode", id: episodes[0].id } : { kind: "main" }
+    firstPlayable ? { kind: "episode", id: firstPlayable.id } : { kind: "main" }
   );
-  const [season, setSeason] = useState(seasons[0] ?? 1);
+  const [season, setSeason] = useState(firstPlayable?.season_number ?? seasons[0] ?? 1);
   const playerRef = useRef<HTMLDivElement>(null);
 
   const current = selection.kind === "episode" ? episodes.find((e) => e.id === selection.id) : undefined;
@@ -117,6 +122,7 @@ export default function Watch({ title }: { title: TitleDetail }) {
               {title.video_url && (
                 <EpisodeRow
                   label="Trailer"
+                  thumbnail={videoThumbnail(title.video_url)}
                   active={selection.kind === "main"}
                   onPlay={() => play({ kind: "main" })}
                 />
@@ -128,8 +134,11 @@ export default function Watch({ title }: { title: TitleDetail }) {
                     key={e.id}
                     number={e.name?.startsWith("Episode") ? undefined : e.episode_number}
                     label={e.name ?? `Episode ${e.episode_number}`}
+                    description={e.description}
+                    thumbnail={e.thumbnail_url ?? videoThumbnail(e.video_url)}
                     active={selection.kind === "episode" && selection.id === e.id}
-                    onPlay={() => play({ kind: "episode", id: e.id })}
+                    onPlay={videoSource(e.video_url) ? () => play({ kind: "episode", id: e.id }) : undefined}
+                    watchUrl={e.watch_url}
                   />
                 ))}
             </ol>
@@ -144,23 +153,69 @@ export default function Watch({ title }: { title: TitleDetail }) {
 function EpisodeRow({
   number,
   label,
+  description,
+  thumbnail,
   active,
   onPlay,
+  watchUrl,
 }: {
   number?: number;
   label: string;
+  description?: string | null;
+  thumbnail: string | null;
   active: boolean;
-  onPlay: () => void;
+  // Missing when the episode can't be played here.
+  onPlay?: () => void;
+  watchUrl?: string | null;
 }) {
+  const thumb = parseHttpUrl(thumbnail);
+  const external = parseHttpUrl(watchUrl ?? null);
+  const content = (
+    <>
+      <span className="episode-thumb">
+        {thumb && <img src={thumb.toString()} alt="" loading="lazy" />}
+        {onPlay && <span className="episode-play" aria-hidden="true">▶</span>}
+      </span>
+      <span className="episode-text">
+        <span className="episode-name">
+          {number !== undefined && <span className="episode-number">{number}</span>}
+          {label}
+        </span>
+        {description && <span className="episode-description">{description}</span>}
+        {active && <span className="episode-state">Playing</span>}
+        {!onPlay &&
+          (external ? (
+            <a className="episode-external" href={external.toString()} target="_blank" rel="noopener noreferrer">
+              Watch on {serviceName(external)} ↗
+            </a>
+          ) : (
+            <span className="episode-state is-muted">Not available here</span>
+          ))}
+      </span>
+    </>
+  );
+
+  if (onPlay) {
+    return (
+      <li>
+        <button className={`episode${active ? " is-active" : ""}`} aria-current={active} onClick={onPlay}>
+          {content}
+        </button>
+      </li>
+    );
+  }
   return (
     <li>
-      <button className={`episode${active ? " is-active" : ""}`} aria-current={active} onClick={onPlay}>
-        <span className="episode-number">{number ?? "▶"}</span>
-        <span className="episode-name">{label}</span>
-        {active && <span className="episode-state">Playing</span>}
-      </button>
+      <div className="episode is-unavailable">{content}</div>
     </li>
   );
+}
+
+function serviceName(u: URL) {
+  const host = u.hostname.replace(/^www\./, "");
+  if (host === "primevideo.com" || host.endsWith("amazon.com")) return "Prime Video";
+  if (host.endsWith("thechosen.tv")) return "The Chosen";
+  return host;
 }
 
 function episodeLabel(e: Episode) {

@@ -12,7 +12,7 @@ type TitleRow = Omit<TitleDetail, "genres" | "episodes"> & {
 
 const SELECT =
   "id, type, name, description, release_year, poster_url, video_url, genres(name), " +
-  "episodes(id, season_number, episode_number, name, video_url)";
+  "episodes(id, season_number, episode_number, name, description, video_url, thumbnail_url, watch_url)";
 
 // cache() lets generateMetadata and the page share one query per request.
 const getTitle = cache(async (id: string) => {
