@@ -45,7 +45,7 @@ from (values
   ('The Chronicles of Narnia: The Lion, the Witch and the Wardrobe', 2005,
    'https://image.tmdb.org/t/p/w500/iREd0rNCjYdf5Ar0vfaW32yrkm.jpg',
    'https://www.youtube.com/watch?v=usEkWtuNn-w',
-   'Four siblings step through a wardrobe into Narnia, a land frozen in endless winter by the White Witch, and join the great lion Aslan to set it free.'),
+   'Four siblings step through a wardrobe and find Narnia, a land frozen in endless winter by the White Witch, and join the great lion Aslan to set it free.'),
   ('The Chronicles of Narnia: Prince Caspian', 2008,
    'https://image.tmdb.org/t/p/w500/qxz3WIyjZiSKUhaTIEJ3c1GcC9z.jpg',
    'https://www.youtube.com/watch?v=oZRZ-2et2uY',
