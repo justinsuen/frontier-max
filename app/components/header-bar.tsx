@@ -108,10 +108,7 @@ export default function HeaderBar({ account }: { account: ReactNode }) {
           title="My List"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 6h11M9 12h11M9 18h11" />
-            <circle cx="4.5" cy="6" r="1.2" />
-            <circle cx="4.5" cy="12" r="1.2" />
-            <circle cx="4.5" cy="18" r="1.2" />
+            <path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.5-6.5 4.5v-16a1 1 0 0 1 1-1z" />
           </svg>
         </Link>
 

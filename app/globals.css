@@ -947,7 +947,8 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.topbar-icon svg circle:not([r="6.5"]) { fill: currentColor; stroke: none; }
+/* Filled bookmark on the My List page itself. */
+.topbar-icon.is-current svg path { fill: currentColor; }
 .topbar-icon:hover { background: rgb(249 248 246 / 0.1); }
 .topbar-icon.is-current { color: var(--brass); }
 .topbar-icon:focus-visible, .topbar .logo:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }

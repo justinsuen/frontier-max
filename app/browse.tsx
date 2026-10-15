@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Artwork, TitleCard } from "./components/title-card";
 import Featured, { type FeaturedItem } from "./featured";
 
@@ -46,7 +46,7 @@ export default function Browse({
   collections?: Collection[];
   featured?: FeaturedItem[];
   continueWatching?: ContinueItem[];
-  // Undefined when no profile is active (signed out), so the row isn't offered.
+  // This profile's saved titles (for the banner's + button); undefined when signed out.
   myList?: Title[];
   profileName?: string;
   signedIn?: boolean;
@@ -73,6 +73,24 @@ export default function Browse({
       : visible.length === 0
         ? "Nothing matches those filters."
         : null);
+  const continueRow =
+    continueWatching.length > 0 ? (
+      <Row heading="Continue watching">
+        {continueWatching.map((item) => (
+          <li key={item.title.id} className="row-item">
+            <Link href={`/titles/${item.title.id}`} className="card-link">
+              <Artwork title={item.title} />
+              <span className="progress-bar" aria-hidden="true">
+                <span style={{ width: `${Math.max(item.percent, 3)}%` }} />
+              </span>
+              <span className="row-title">{item.title.name}</span>
+              {item.label && <span className="row-label">{item.label}</span>}
+            </Link>
+          </li>
+        ))}
+      </Row>
+    ) : null;
+
   // The banner gives way to results while searching.
   const showFeatured = featured.length > 0 && !q;
 
@@ -102,41 +120,19 @@ export default function Browse({
       )}
 
       <main>
-        {!q && continueWatching.length > 0 && (
-          <Row heading="Continue watching">
-            {continueWatching.map((item) => (
-              <li key={item.title.id} className="row-item">
-                <Link href={`/titles/${item.title.id}`} className="card-link">
-                  <Artwork title={item.title} />
-                  <span className="progress-bar" aria-hidden="true">
-                    <span style={{ width: `${Math.max(item.percent, 3)}%` }} />
-                  </span>
-                  <span className="row-title">{item.title.name}</span>
-                  {item.label && <span className="row-label">{item.label}</span>}
-                </Link>
-              </li>
-            ))}
-          </Row>
-        )}
-
-        {!q && myList && (
-          <Row heading="My List" id="my-list">
-            {myList.length === 0 ? (
-              <li className="row-empty">Use “+ My List” on any title to save it here.</li>
-            ) : (
-              myList.map((title) => <RowTitle key={title.id} title={title} />)
-            )}
-          </Row>
-        )}
-
         {!q &&
-          collections.map((c) => (
-            <Row key={c.slug} heading={c.name} description={c.description} id={c.slug}>
-              {c.titles.map((title) => (
-                <RowTitle key={title.id} title={title} />
-              ))}
-            </Row>
+          collections.map((c, i) => (
+            <Fragment key={c.slug}>
+              <Row heading={c.name} description={c.description} id={c.slug}>
+                {c.titles.map((title) => (
+                  <RowTitle key={title.id} title={title} />
+                ))}
+              </Row>
+              {/* Continue watching sits after the first section. */}
+              {i === 0 && continueRow}
+            </Fragment>
           ))}
+        {!q && collections.length === 0 && continueRow}
 
         {!q && collections.length > 0 && (
           <h2 className="section-heading" id="all-titles">
