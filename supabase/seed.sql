@@ -87,3 +87,29 @@ from (values
    'A young shepherd named David rises from obscurity as King Saul''s reign begins to crumble, setting him on the path to becoming Israel''s most celebrated king.')
 ) as v (name, release_year, poster_url, video_url, description)
 where not exists (select 1 from public.titles t where t.name = v.name);
+
+-- Episodes, from each show's official YouTube channel. Each row finds its series by name.
+-- The Chosen posts Season 1 as four videos with two episodes each, so each row covers a pair.
+insert into public.episodes (title_id, season_number, episode_number, name, video_url)
+select t.id, v.season_number, v.episode_number, v.name, v.video_url
+from (values
+  ('The Promised Land', 1, 1, 'Pilot',    'https://www.youtube.com/watch?v=HSI04-1oLwg'),
+  ('The Promised Land', 1, 2, 'Sinai',    'https://www.youtube.com/watch?v=vSosv_ZfYk4'),
+  ('The Promised Land', 1, 3, 'Pitfalls', 'https://www.youtube.com/watch?v=0Fi2IuYAr2A'),
+  ('The Promised Land', 1, 4, 'Offering', 'https://www.youtube.com/watch?v=dtQ3vAf62JI'),
+  ('The Promised Land', 1, 5, 'Bones',    'https://www.youtube.com/watch?v=Iqjh7fzOQPU'),
+  ('The Promised Land', 1, 6, 'Presence', 'https://www.youtube.com/watch?v=Wx0hFYWxYRA'),
+  ('The Chosen', 1, 1, 'Episodes 1 & 2: I Have Called You by Name / Shabbat',
+   'https://www.youtube.com/watch?v=0E-8-NcL7tc'),
+  ('The Chosen', 1, 3, 'Episodes 3 & 4: Jesus Loves the Little Children / The Rock on Which It Is Built',
+   'https://www.youtube.com/watch?v=0DPzq53O4DI'),
+  ('The Chosen', 1, 5, 'Episodes 5 & 6: The Wedding Gift / Indescribable Compassion',
+   'https://www.youtube.com/watch?v=LB3QWkTBvr4'),
+  ('The Chosen', 1, 7, 'Episodes 7 & 8: Invitations / I Am He',
+   'https://www.youtube.com/watch?v=UwiURke07Ck')
+) as v (series, season_number, episode_number, name, video_url)
+join public.titles t on t.name = v.series and t.type = 'series'
+where not exists (
+  select 1 from public.episodes e
+  where e.title_id = t.id and e.season_number = v.season_number and e.episode_number = v.episode_number
+);

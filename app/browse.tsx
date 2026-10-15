@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 export type Title = {
@@ -45,9 +46,9 @@ export default function Browse({ titles, message }: { titles: Title[]; message?:
   return (
     <>
       <header className="site-header">
-        <p className="logo">
+        <Link href="/" className="logo">
           Frontier <span>Max</span>
-        </p>
+        </Link>
         <input
           className="search"
           type="search"
@@ -107,19 +108,21 @@ export default function Browse({ titles, message }: { titles: Title[]; message?:
 function TitleCard({ title }: { title: Title }) {
   return (
     <li className="card">
-      {isHttpUrl(title.poster_url) ? (
-        // Posters come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
-        <img className="poster" src={title.poster_url} alt="" loading="lazy" />
-      ) : (
-        <div className="poster">{title.name.charAt(0).toUpperCase()}</div>
-      )}
-      <div className="card-body">
-        <h2 className="card-title">{title.name}</h2>
-        <p className="card-meta">
-          <span className={`badge badge-${title.type}`}>{title.type === "series" ? "Series" : "Movie"}</span>
-          {title.release_year}
-        </p>
-      </div>
+      <Link href={`/titles/${title.id}`} className="card-link">
+        {isHttpUrl(title.poster_url) ? (
+          // Posters come from arbitrary hosts typed into the catalog, so skip next/image's domain allowlist.
+          <img className="poster" src={title.poster_url} alt="" loading="lazy" />
+        ) : (
+          <div className="poster">{title.name.charAt(0).toUpperCase()}</div>
+        )}
+        <div className="card-body">
+          <h2 className="card-title">{title.name}</h2>
+          <p className="card-meta">
+            <span className={`badge badge-${title.type}`}>{title.type === "series" ? "Series" : "Movie"}</span>
+            {title.release_year}
+          </p>
+        </div>
+      </Link>
     </li>
   );
 }
