@@ -142,7 +142,7 @@ main { padding: 8px clamp(16px, 4vw, 48px) 64px; }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 28px 20px;
   margin: 0;
   padding: 0;
@@ -318,7 +318,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 @media (max-width: 560px) {
   .site-header:has(.search) { flex-direction: column; align-items: stretch; }
   .search { width: 100%; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 12px; }
+  .grid { grid-template-columns: 1fr; gap: 22px; }
 }
 
 /* ---- Accounts, profiles and personal rows ---- */
@@ -559,8 +559,11 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 .row-scroller {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 260px);
-  gap: 16px;
+  /* --cols whole tiles plus a sliver of the next, so it's clear the row continues. */
+  --cols: 4;
+  --gap: 16px;
+  grid-auto-columns: calc((100% - var(--cols) * var(--gap)) / (var(--cols) + 0.3));
+  gap: var(--gap);
   margin: 0;
   padding: 0 0 8px;
   list-style: none;
@@ -713,7 +716,6 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
 
 
 @media (max-width: 560px) {
-  .row-scroller { grid-auto-columns: minmax(180px, 200px); }
   .tile { font-size: 1.75rem; }
 }
 
@@ -728,7 +730,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 48px;
+  width: 56px;
   border: 0;
   color: var(--text);
   cursor: pointer;
@@ -921,3 +923,8 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   .featured-slide, .featured-dot { transition: none; }
   .featured-dot-fill { display: none; }
 }
+
+/* Tiles across a row, by screen width (plus the sliver from .row-scroller). */
+@media (max-width: 1100px) { .row-scroller { --cols: 3; } }
+@media (max-width: 760px) { .row-scroller { --cols: 2; --gap: 12px; } }
+@media (max-width: 480px) { .row-scroller { --cols: 1; } }
