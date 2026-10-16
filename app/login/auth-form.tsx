@@ -27,43 +27,41 @@ export default function AuthForm({
         </p>
       )}
 
-      {state?.message ? (
-        <p className="form-message" role="status">
-          {state.message} Open it on this device to finish signing up.
-        </p>
-      ) : (
-        <form action={formAction} className="form">
-          <input type="hidden" name="next" value={next} />
-          {mode === "signup" && (
-            <label className="field">
-              <span>Your name</span>
-              <input name="name" required maxLength={40} autoComplete="given-name" />
-            </label>
-          )}
-          <label className="field">
-            <span>Email</span>
-            <input name="email" type="email" required autoComplete="email" />
-          </label>
-          <label className="field">
-            <span>Password</span>
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={mode === "signup" ? 8 : undefined}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            />
-          </label>
-          {state?.error && (
-            <p className="form-error" role="alert">
-              {state.error}
-            </p>
-          )}
-          <button className="button-primary" disabled={pending}>
-            {pending ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
-          </button>
-        </form>
-      )}
+      <form action={formAction} className="form">
+        <input type="hidden" name="next" value={next} />
+        <label className="field">
+          <span>Username</span>
+          <input
+            name="username"
+            required
+            maxLength={mode === "signup" ? 20 : undefined}
+            pattern={mode === "signup" ? "[A-Za-z0-9_]{3,20}" : undefined}
+            title={mode === "signup" ? "3 to 20 letters, numbers or underscores" : undefined}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+          {mode === "signup" && <small className="field-hint">3 to 20 letters, numbers or underscores.</small>}
+        </label>
+        <label className="field">
+          <span>Password</span>
+          <input
+            name="password"
+            type="password"
+            required
+            minLength={mode === "signup" ? 6 : undefined}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          />
+        </label>
+        {state?.error && (
+          <p className="form-error" role="alert">
+            {state.error}
+          </p>
+        )}
+        <button className="button-primary" disabled={pending}>
+          {pending ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
+        </button>
+      </form>
 
       <p className="auth-switch">
         {mode === "signup" ? (

@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AVATAR_COLORS, MAX_PROFILES, PROFILE_COOKIE, getAccount, safeNext, type AvatarColor } from "@/lib/account";
 import { CHARACTER_AVATAR_IDS } from "@/lib/avatars";
@@ -13,45 +13,54 @@ const text = (formData: FormData, key: string) => String(formData.get(key) ?? ""
 
 // ---- Signing in and out ----
 
+// Accounts are made with just a username, so testers needn't confirm an email. Supabase
+// still needs an email address, so each username gets one at this domain; no mail is
+// sent there as long as "Confirm email" is off in Supabase. Accounts made earlier with
+// a real email can still sign in with it.
+const USERNAME_EMAIL_DOMAIN = "users.frontier-max.vercel.app";
+const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
+const MIN_PASSWORD = 6;
+
+function loginEmail(login: string) {
+  return login.includes("@") ? login : `${login.toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
+}
+
 export async function signIn(_prev: FormState, formData: FormData): Promise<FormState> {
-  const email = text(formData, "email");
+  const login = text(formData, "username");
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) return { error: "Enter your email and password." };
+  if (!login || !password) return { error: "Enter your username and password." };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    return {
-      error:
-        error.code === "email_not_confirmed"
-          ? "Confirm your email first. Check your inbox for the link we sent."
-          : "That email and password don't match an account.",
-    };
-  }
+  const { error } = await supabase.auth.signInWithPassword({ email: loginEmail(login), password });
+  if (error) return { error: "That username and password don't match an account." };
   redirect(`/profiles?next=${encodeURIComponent(safeNext(formData.get("next")))}`);
 }
 
 export async function signUp(_prev: FormState, formData: FormData): Promise<FormState> {
-  const name = text(formData, "name");
-  const email = text(formData, "email");
+  const username = text(formData, "username").toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!name || name.length > 40) return { error: "Enter a name of up to 40 characters." };
-  if (!email) return { error: "Enter your email." };
-  if (password.length < 8) return { error: "Use a password of at least 8 characters." };
+  if (!USERNAME_PATTERN.test(username)) {
+    return { error: "Use 3 to 20 letters, numbers or underscores for your username." };
+  }
+  if (password.length < MIN_PASSWORD) return { error: `Use a password of at least ${MIN_PASSWORD} characters.` };
 
-  const h = await headers();
-  const origin = h.get("origin") ?? `https://${h.get("host")}`;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: loginEmail(username),
     password,
-    options: { data: { display_name: name }, emailRedirectTo: `${origin}/auth/confirm?next=/profiles` },
+    // The first profile is named after the username.
+    options: { data: { display_name: username } },
   });
-  if (error) return { error: error.message };
-
-  // With email confirmation on, there's no session until the link is clicked.
-  if (!data.session) return { message: `Almost done. We sent a confirmation link to ${email}.` };
-  redirect("/profiles");
+  if (error) {
+    return {
+      error: error.code === "user_already_exists" ? "That username is taken. Try another." : error.message,
+    };
+  }
+  // Only happens while Supabase still asks new accounts to confirm an email.
+  if (!data.session) {
+    return { error: "Your account was made, but sign-ups need \"Confirm email\" turned off in Supabase to sign in." };
+  }
+  redirect(`/profiles?next=${encodeURIComponent(safeNext(formData.get("next")))}`);
 }
 
 export async function signOut() {

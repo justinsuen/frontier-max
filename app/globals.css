@@ -506,6 +506,7 @@ button.episode:hover .episode-play, .episode.is-active .episode-play { opacity: 
   font-weight: 400;
 }
 .field input:focus { outline: none; border-color: var(--brass); }
+.field-hint { color: var(--muted); font-size: 0.8rem; font-weight: 400; }
 .form-error { margin: 0; color: #f0938b; font-size: 0.9rem; }
 .form-message { margin: 0; color: var(--green); }
 .auth-switch { margin: 0; color: var(--muted); font-size: 0.9rem; }
